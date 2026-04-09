@@ -61,26 +61,26 @@
         .modal-overlay.active { display: flex; }
         .modal-content { background: var(--bg-card); padding: 20px; border-radius: 16px; width: 100%; max-width: 350px; border: 1px solid var(--border); position: relative; transition: 0.3s; }
         
-        /* Auth Screen */
+        /* Auth Screen & Tabs */
         #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; transition: 0.3s; }
-        .auth-box { background: var(--bg-card); padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 400px; border: 1px solid var(--accent); box-shadow: 0 10px 30px var(--accent-glow); }
+        .auth-box { background: var(--bg-card); padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 400px; border: 1px solid var(--accent); box-shadow: 0 10px 30px var(--accent-glow); transition: 0.3s; }
+        .auth-tabs { display: flex; background: var(--bg-input); border-radius: 10px; padding: 5px; margin-bottom: 20px; }
+        .auth-tab { flex: 1; background: transparent; border: none; color: var(--text-muted); padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-family: 'Poppins'; font-size: 13px; font-weight: 500; }
+        .auth-tab.active { background: var(--bg-card); color: var(--text-main); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
 
         /* =========================================
            3. CSS - DISEÑOS DE MÓDULOS ESPECÍFICOS
            ========================================= */
-        /* Módulo Servicios (Grid) */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .item-box { background: var(--bg-input); border: 1px solid var(--border); border-radius: 16px; padding: 25px 10px 15px 10px; text-align: center; position: relative; cursor: pointer; transition: 0.2s; }
         .item-box:active { transform: scale(0.98); border-color: var(--accent); }
         .btn-delete { position: absolute; top: 10px; right: 10px; background: rgba(239, 68, 68, 0.15); color: var(--danger); border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; justify-content: center; align-items: center; z-index: 10; transition: 0.2s; }
         .btn-delete:active { background: var(--danger); color: white; transform: scale(0.9); }
 
-        /* Módulo Productos e Historial (Listas) */
         .list-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg-input); padding: 12px 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 10px; position: relative; cursor: pointer; transition: 0.2s; }
         .list-row:active { transform: scale(0.98); border-color: var(--accent); }
         .floating-cart { margin-top: 15px; border-color: var(--accent); position: sticky; bottom: 85px; z-index: 90; box-shadow: 0 -10px 20px var(--bg-dark); }
 
-        /* Toggles (Switches) en Ajustes */
         .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border); }
         .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -94,15 +94,23 @@
 
     <div id="auth-screen">
         <div class="auth-box">
-            <i class="fas fa-cut" style="font-size: 40px; color: var(--accent); margin-bottom: 15px;"></i>
-            <h2 style="margin-top:0;">POS SaaS Pro</h2>
-            <p style="color: var(--text-muted); font-size: 13px;">Inicia sesión o registra tu barbería</p>
+            <i id="auth-main-icon" class="fas fa-user-lock" style="font-size: 40px; color: var(--accent); margin-bottom: 10px; transition: 0.3s;"></i>
             
-            <input type="text" id="auth-biz" class="input-minimal" placeholder="Nombre de tu Barbería">
+            <h2 style="margin-top:0; margin-bottom: 5px;" id="auth-title">Bienvenido de vuelta</h2>
+            <p style="color: var(--text-muted); font-size: 13px; margin-top: 0; margin-bottom: 20px;" id="auth-subtitle">Ingresa a tu cuenta existente</p>
+            
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tab-login" onclick="setAuthMode('login')">Iniciar Sesión</button>
+                <button class="auth-tab" id="tab-register" onclick="setAuthMode('register')">Registrar Barbería</button>
+            </div>
+            
+            <input type="text" id="auth-biz" class="input-minimal" placeholder="ID de tu Barbería (Tu espacio)">
             <input type="email" id="auth-email" class="input-minimal" placeholder="Correo electrónico">
             <input type="password" id="auth-pass" class="input-minimal" placeholder="Contraseña segura">
             
-            <button class="btn-accent" id="btn-login" onclick="autenticarUsuario()"><i class="fas fa-sign-in-alt"></i> Ingresar al Sistema</button>
+            <input type="password" id="auth-pass-confirm" class="input-minimal" placeholder="Confirmar contraseña" style="display: none;">
+            
+            <button class="btn-accent" id="btn-login" onclick="autenticarUsuario()"><i class="fas fa-sign-in-alt"></i> Entrar al Sistema</button>
         </div>
     </div>
 
@@ -124,16 +132,13 @@
                 <p style="font-size: 12px; color: var(--accent); margin: 0; font-weight: 600;">CATÁLOGO DE SERVICIOS</p>
                 <p style="font-size: 10px; color: var(--text-muted); margin: 5px 0 0 0;">Toca un servicio para cobrarlo</p>
             </div>
-            
             <div class="grid-2" id="grid-servicios"></div>
-            
             <button class="btn-outline" onclick="abrirFormulario('servicio')"><i class="fas fa-plus"></i> Añadir Nuevo Servicio</button>
         </div>
 
         <div id="view-productos" class="view">
             <div id="lista-productos" style="padding-bottom: 10px;"></div>
             <button class="btn-outline" onclick="abrirFormulario('producto')"><i class="fas fa-plus"></i> Añadir Producto</button>
-            
             <div class="card floating-cart">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                     <span style="color: var(--text-muted);">Artículos: <b id="cart-count" style="color: var(--text-main);">0</b></span>
@@ -148,13 +153,11 @@
                 <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Ingresos en Rango</p>
                 <h2 style="margin: 5px 0; color: var(--success);" id="total-filtro">$0</h2>
             </div>
-            
             <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                 <input type="date" id="filtro-inicio" class="input-minimal" style="margin-bottom:0; padding:10px; font-size:12px;">
                 <input type="date" id="filtro-fin" class="input-minimal" style="margin-bottom:0; padding:10px; font-size:12px;">
                 <button class="btn-accent" style="width: auto; padding: 10px 15px;" onclick="renderHistorial()"><i class="fas fa-search"></i></button>
             </div>
-
             <div id="lista-historial"></div>
         </div>
 
@@ -167,12 +170,10 @@
 
             <div class="card">
                 <h3 style="margin-top: 0; font-size: 14px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">Personalización</h3>
-                
                 <div class="toggle-row">
                     <span style="font-size: 13px;"><i class="fas fa-sun" style="margin-right: 5px;"></i> Modo Claro</span>
                     <label class="switch"><input type="checkbox" id="mod-theme-toggle" onchange="toggleLightMode()"><span class="slider"></span></label>
                 </div>
-
                 <div style="display:flex; gap:15px; justify-content:center; margin:15px 0;">
                     <div style="width:35px; height:35px; border-radius:50%; cursor:pointer; background:#d4af37; border: 2px solid white;" onclick="cambiarTema('#d4af37', this)" class="color-dot"></div>
                     <div style="width:35px; height:35px; border-radius:50%; cursor:pointer; background:#3b82f6; border: 2px solid transparent;" onclick="cambiarTema('#3b82f6', this)" class="color-dot"></div>
@@ -198,16 +199,12 @@
                 <button onclick="cerrarModal('modal-form')" style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--text-muted); font-size:18px; cursor:pointer;"><i class="fas fa-times"></i></button>
                 <h3 style="margin-top:0;" id="form-title">Añadir</h3>
                 <input type="hidden" id="form-type">
-                
                 <label class="form-label" style="font-size: 12px; color: var(--text-muted);">Nombre del Ítem</label>
                 <input type="text" id="form-name" class="input-minimal" placeholder="Ej: Corte Premium">
-                
                 <label class="form-label" style="font-size: 12px; color: var(--text-muted);">Precio Base ($)</label>
                 <input type="number" id="form-price" class="input-minimal" placeholder="Ej: 25000" min="0">
-                
                 <label class="form-label" id="lbl-detail" style="font-size: 12px; color: var(--text-muted);">Detalle adicional</label>
                 <input type="text" id="form-detail" class="input-minimal" placeholder="Ej: 45 min / Cod: 123">
-                
                 <button class="btn-accent" onclick="guardarItem()"><i class="fas fa-save"></i> Guardar Seguro</button>
             </div>
         </div>
@@ -217,10 +214,8 @@
                 <button onclick="cerrarModal('pos-modal')" style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--text-muted); font-size:18px; cursor:pointer;"><i class="fas fa-times"></i></button>
                 <h3 style="margin-top:0;" id="pos-title">Cobrar</h3>
                 <p id="pos-subtitle" style="color:var(--text-muted); font-size: 13px;"></p>
-                
                 <label class="form-label" style="text-align:center; font-size: 12px; color: var(--text-muted);">Monto a Cobrar</label>
                 <input type="number" id="pos-price" class="input-minimal" style="font-size:24px; font-weight:bold; text-align:center; color:var(--accent);" min="0">
-                
                 <button class="btn-accent" onclick="procesarCobro()"><i class="fas fa-check"></i> Confirmar Operación</button>
             </div>
         </div>
@@ -240,10 +235,9 @@
         // --- CONSTANTES Y PREPARACIÓN CLOUD ---
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyg3ZDE6N86MvcM_Fo8gl_q4_IGeQPyRRB8b_USamD5379tXHS9o5N7ocPfvD11Tcro/exec";
 
-        // --- BLINDAJE ANTI-XSS CORREGIDO ---
         function sanitize(str) {
             if (typeof str !== 'string') return str;
-            return str.replace(/[&<>"'/]/ig, (m) => ({ '&': '&', '<': '<', '>': '>', '"': '"', "'": ''', "/": '/' }[m]));
+            return str.replace(/[&<>"'/]/ig, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', "/": '&#x2F;' }[m]));
         }
 
         // --- ESTADO GLOBAL (App Data) ---
@@ -253,25 +247,83 @@
             carrito: { cantidad: 0, total: 0 } 
         };
         let posCurrentAction = { tipo: '', id: null };
+        let currentAuthMode = 'login'; // <- Variable para identificar si es registro o login
 
-        // --- 1. INICIALIZACIÓN Y AUTH PERSISTENTE ---
+        // --- 1. INICIALIZACIÓN Y AUTH PERSISTENTE (BLINDADO) ---
         window.onload = () => {
             let session = localStorage.getItem('posSaaS_Session');
             if(session) {
-                appData = Object.assign(appData, JSON.parse(session)); 
-                iniciarApp();
+                try {
+                    let parsedSession = JSON.parse(session);
+                    appData = Object.assign(appData, parsedSession);
+                    
+                    if(!Array.isArray(appData.servicios)) appData.servicios = [];
+                    if(!Array.isArray(appData.productos)) appData.productos = [];
+                    if(!Array.isArray(appData.historial)) appData.historial = [];
+                    
+                    iniciarApp();
+                } catch(e) {
+                    console.error("Caché corrupto, limpiando...", e);
+                    localStorage.removeItem('posSaaS_Session');
+                }
             }
             setInterval(actualizarReloj, 60000);
             actualizarReloj();
         };
 
+        // --- LÓGICA DE TABS UI EN LOGIN MODIFICADA PARA DIFERENCIACIÓN VISUAL ---
+        function setAuthMode(mode) {
+            currentAuthMode = mode;
+            let tabLogin = document.getElementById('tab-login');
+            let tabReg = document.getElementById('tab-register');
+            let inputBiz = document.getElementById('auth-biz');
+            let icon = document.getElementById('auth-main-icon');
+            let title = document.getElementById('auth-title');
+            let subtitle = document.getElementById('auth-subtitle');
+            let btnSubmit = document.getElementById('btn-login');
+            let passConfirm = document.getElementById('auth-pass-confirm');
+
+            if (mode === 'login') {
+                tabLogin.classList.add('active');
+                tabReg.classList.remove('active');
+                icon.className = 'fas fa-user-lock';
+                icon.style.color = 'var(--accent)';
+                title.innerText = 'Bienvenido de vuelta';
+                subtitle.innerText = 'Ingresa a tu cuenta existente';
+                inputBiz.placeholder = "ID de tu Barbería (Tu espacio)";
+                passConfirm.style.display = 'none'; // Ocultar confirmar contraseña
+                passConfirm.value = ''; // Limpiar campo
+                btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar al Sistema';
+                btnSubmit.style.backgroundColor = 'var(--accent)'; // Botón dorado
+                btnSubmit.style.color = '#000';
+            } else {
+                tabReg.classList.add('active');
+                tabLogin.classList.remove('active');
+                icon.className = 'fas fa-store';
+                icon.style.color = 'var(--success)';
+                title.innerText = 'Nuevo Negocio';
+                subtitle.innerText = 'Crea tu espacio en la nube';
+                inputBiz.placeholder = "Nombre de tu Nueva Barbería";
+                passConfirm.style.display = 'block'; // Mostrar confirmar contraseña
+                btnSubmit.innerHTML = '<i class="fas fa-rocket"></i> Crear Cuenta';
+                btnSubmit.style.backgroundColor = 'var(--success)'; // Botón verde
+                btnSubmit.style.color = '#fff';
+            }
+        }
+
         function autenticarUsuario() {
             let biz = document.getElementById('auth-biz').value.trim();
             let email = document.getElementById('auth-email').value.trim().toLowerCase();
             let pass = document.getElementById('auth-pass').value.trim();
+            let passConfirm = document.getElementById('auth-pass-confirm').value.trim();
 
             if(!biz || !email || !pass) return mostrarToast("⚠️ Llena todos los campos");
             if(pass.length < 6) return mostrarToast("⚠️ Contraseña mínima 6 caracteres");
+            
+            // Nueva validación frontend exclusiva para el Registro
+            if(currentAuthMode === 'register' && pass !== passConfirm) {
+                return mostrarToast("⚠️ Las contraseñas no coinciden");
+            }
 
             let btnLogin = document.getElementById('btn-login');
             let originalText = btnLogin.innerHTML;
@@ -282,7 +334,7 @@
                 action: "registro_login",
                 email: email,
                 password: pass,
-                bizName: biz
+                bizName: biz 
             };
 
             fetch(GOOGLE_SCRIPT_URL, {
@@ -300,8 +352,20 @@
                     appData.email = sanitize(email);
                     appData.bizName = sanitize(biz);
                     
-                    if(data.data && data.data.dbId) {
-                        appData.dbId = data.data.dbId;
+                    if(data.data) {
+                        appData.dbId = data.data.dbId || '';
+                        
+                        function parseData(backendData) {
+                            if (!backendData) return [];
+                            if (typeof backendData === 'string') {
+                                try { return JSON.parse(backendData); } catch(e) { return []; }
+                            }
+                            return Array.isArray(backendData) ? backendData : [];
+                        }
+
+                        appData.servicios = parseData(data.data.servicios);
+                        appData.productos = parseData(data.data.productos);
+                        appData.historial = parseData(data.data.historial);
                     }
                     
                     guardarLocales();
@@ -349,12 +413,9 @@
             if (!appData.dbId) return; 
             let payload = { action: "sync_historial", dbId: appData.dbId, historial: appData.historial };
             fetch(GOOGLE_SCRIPT_URL, { method: 'POST', redirect: 'follow', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
-            .then(res => res.json())
-            .then(data => { if(data.success) console.log("Sincronización Exitosa: " + data.message); })
             .catch(err => console.error("Error Fetch Sync:", err));
         }
 
-        // --- 2. NAVEGACIÓN MATRIZ ---
         function switchView(viewId, btnElement, title) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -374,10 +435,9 @@
             renderHistorial(); 
         }
 
-        // --- 3. MÓDULO SERVICIOS ---
         function renderServicios() {
             let html = '';
-            if (appData.servicios.length === 0) {
+            if (!appData.servicios || appData.servicios.length === 0) {
                 document.getElementById('grid-servicios').innerHTML = `<p style="grid-column: span 2; text-align: center; color: var(--text-muted); font-size: 12px;">Sin servicios registrados.</p>`;
                 return;
             }
@@ -397,10 +457,9 @@
             document.getElementById('grid-servicios').innerHTML = html;
         }
 
-        // --- 4. MÓDULO PRODUCTOS ---
         function renderProductos() {
             let html = '';
-            if (appData.productos.length === 0) {
+            if (!appData.productos || appData.productos.length === 0) {
                 document.getElementById('lista-productos').innerHTML = `<p style="text-align: center; color: var(--text-muted); font-size: 12px;">Sin productos registrados.</p>`;
                 return;
             }
@@ -423,7 +482,6 @@
             document.getElementById('lista-productos').innerHTML = html;
         }
 
-        // --- 5. MÓDULO HISTORIAL ---
         function registrarEnHistorial(desc, monto, tipoStr) {
             let now = new Date();
             appData.historial.push({ 
@@ -445,6 +503,7 @@
             let fechaInicio = document.getElementById('filtro-inicio').value;
             let fechaFin = document.getElementById('filtro-fin').value;
             
+            if (!appData.historial) appData.historial = [];
             let historiaInvertida = [...appData.historial].reverse();
 
             historiaInvertida.forEach(h => {
@@ -473,7 +532,6 @@
             document.getElementById('total-filtro').innerText = `$${total.toLocaleString('es-CO')}`;
         }
 
-        // --- 6. LOGICA CRUD Y POS ---
         function abrirFormulario(tipo) {
             document.getElementById('form-type').value = tipo;
             document.getElementById('form-title').innerText = tipo === 'servicio' ? 'Nuevo Servicio' : 'Nuevo Producto';
@@ -505,8 +563,6 @@
             if (!appData.dbId) return; 
             let payload = { action: "sync_item", dbId: appData.dbId, tipo: tipoItem, item: itemData };
             fetch(GOOGLE_SCRIPT_URL, { method: 'POST', redirect: 'follow', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
-            .then(res => res.json())
-            .then(data => { if(data.success) console.log("Ítem en la nube:", data.message); })
             .catch(err => console.error("Error conexión ítem:", err));
         }
 
@@ -554,7 +610,6 @@
             mostrarToast("✅ Venta de productos procesada");
         }
 
-        // --- 7. MÓDULO AJUSTES FUNCIONES ---
         function cambiarTema(color, element) {
             document.documentElement.style.setProperty('--accent', color);
             appData.theme = color;
@@ -579,7 +634,6 @@
             document.getElementById('btn-nav-prod').style.display = prodActivo ? 'flex' : 'none';
         }
 
-        // --- 8. HELPERS GLOBALES ---
         function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
         function mostrarToast(msg) { 
             let t = document.getElementById("toast"); 
