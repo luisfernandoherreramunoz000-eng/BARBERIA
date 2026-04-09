@@ -247,9 +247,9 @@
             carrito: { cantidad: 0, total: 0 } 
         };
         let posCurrentAction = { tipo: '', id: null };
-        let currentAuthMode = 'login'; // <- Variable para identificar si es registro o login
+        let currentAuthMode = 'login';
 
-        // --- 1. INICIALIZACIÓN Y AUTH PERSISTENTE (BLINDADO) ---
+        // --- 1. INICIALIZACIÓN Y AUTH PERSISTENTE ---
         window.onload = () => {
             let session = localStorage.getItem('posSaaS_Session');
             if(session) {
@@ -271,7 +271,7 @@
             actualizarReloj();
         };
 
-        // --- LÓGICA DE TABS UI EN LOGIN MODIFICADA PARA DIFERENCIACIÓN VISUAL ---
+        // --- LÓGICA DE TABS UI EN LOGIN ---
         function setAuthMode(mode) {
             currentAuthMode = mode;
             let tabLogin = document.getElementById('tab-login');
@@ -291,10 +291,10 @@
                 title.innerText = 'Bienvenido de vuelta';
                 subtitle.innerText = 'Ingresa a tu cuenta existente';
                 inputBiz.placeholder = "ID de tu Barbería (Tu espacio)";
-                passConfirm.style.display = 'none'; // Ocultar confirmar contraseña
-                passConfirm.value = ''; // Limpiar campo
+                passConfirm.style.display = 'none';
+                passConfirm.value = '';
                 btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar al Sistema';
-                btnSubmit.style.backgroundColor = 'var(--accent)'; // Botón dorado
+                btnSubmit.style.backgroundColor = 'var(--accent)';
                 btnSubmit.style.color = '#000';
             } else {
                 tabReg.classList.add('active');
@@ -304,11 +304,33 @@
                 title.innerText = 'Nuevo Negocio';
                 subtitle.innerText = 'Crea tu espacio en la nube';
                 inputBiz.placeholder = "Nombre de tu Nueva Barbería";
-                passConfirm.style.display = 'block'; // Mostrar confirmar contraseña
+                passConfirm.style.display = 'block';
                 btnSubmit.innerHTML = '<i class="fas fa-rocket"></i> Crear Cuenta';
-                btnSubmit.style.backgroundColor = 'var(--success)'; // Botón verde
+                btnSubmit.style.backgroundColor = 'var(--success)';
                 btnSubmit.style.color = '#fff';
             }
+        }
+
+        // NUEVO PARSER BLINDADO: Extrae las listas sin importar cómo las envíe Google Scripts
+        function extractArraySafely(key, sourceObj) {
+            if (!sourceObj || !(key in sourceObj)) return null;
+            let val = sourceObj[key];
+            if (!val) return null;
+            
+            // Si Google lo envió como texto/string por accidente
+            if (typeof val === 'string') {
+                try { val = JSON.parse(val); } 
+                catch(e) { 
+                    try { val = JSON.parse(val.replace(/'/g, '"')); } // Intento de limpiar comillas simples
+                    catch(e2) { return null; }
+                }
+            }
+            // Si ya es un array válido, lo devolvemos
+            if (Array.isArray(val)) return val;
+            // Si Google lo envolvió en un objeto raro
+            if (typeof val === 'object') return Object.values(val);
+            
+            return null; // Si todo falla, devuelve null para no sobreescribir la lista local
         }
 
         function autenticarUsuario() {
@@ -320,7 +342,6 @@
             if(!biz || !email || !pass) return mostrarToast("⚠️ Llena todos los campos");
             if(pass.length < 6) return mostrarToast("⚠️ Contraseña mínima 6 caracteres");
             
-            // Nueva validación frontend exclusiva para el Registro
             if(currentAuthMode === 'register' && pass !== passConfirm) {
                 return mostrarToast("⚠️ Las contraseñas no coinciden");
             }
@@ -352,20 +373,22 @@
                     appData.email = sanitize(email);
                     appData.bizName = sanitize(biz);
                     
-                    if(data.data) {
-                        appData.dbId = data.data.dbId || '';
+                    // LÓGICA CORREGIDA: Buscamos la data donde sea que Google la haya puesto (en data.data o en data)
+                    let source = data.data || data || {};
+                    
+                    if(source) {
+                        appData.dbId = source.dbId || appData.dbId;
                         
-                        function parseData(backendData) {
-                            if (!backendData) return [];
-                            if (typeof backendData === 'string') {
-                                try { return JSON.parse(backendData); } catch(e) { return []; }
-                            }
-                            return Array.isArray(backendData) ? backendData : [];
-                        }
-
-                        appData.servicios = parseData(data.data.servicios);
-                        appData.productos = parseData(data.data.productos);
-                        appData.historial = parseData(data.data.historial);
+                        // Solo actualizamos las listas de la App SI la nube envió datos válidos. 
+                        // Si no envió nada, mantenemos lo que ya teníamos, evitando que se pongan en blanco.
+                        let srv = extractArraySafely('servicios', source);
+                        if(srv) appData.servicios = srv;
+                        
+                        let prd = extractArraySafely('productos', source);
+                        if(prd) appData.productos = prd;
+                        
+                        let hist = extractArraySafely('historial', source);
+                        if(hist) appData.historial = hist;
                     }
                     
                     guardarLocales();
