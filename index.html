@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com https://script.google.com https://script.googleusercontent.com;">
+    <title>SaaS POS Barber Pro</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        /* =========================================
+           1. CSS - VARIABLES Y TEMA PREMIUM OSCURO
+           ========================================= */
+        :root { 
+            --bg-dark: #0f1115; --bg-card: #1c1f26; --bg-input: #252932; 
+            --bg-header: rgba(15, 17, 21, 0.95); --bg-nav: rgba(28, 31, 38, 0.95);
+            --accent: #d4af37; --accent-glow: rgba(212, 175, 55, 0.2); 
+            --text-main: #ffffff; --text-muted: #8b92a5; 
+            --danger: #ef4444; --success: #10b981; --border: #2a2e39; 
+        }
+
+        /* --- MODO CLARO --- */
+        body.light-mode {
+            --bg-dark: #f4f6f8; --bg-card: #ffffff; --bg-input: #eef2f6; 
+            --bg-header: rgba(244, 246, 248, 0.95); --bg-nav: rgba(255, 255, 255, 0.95);
+            --text-main: #1e293b; --text-muted: #64748b; 
+            --border: #cbd5e1; 
+        }
+
+        body { margin: 0; font-family: 'Poppins', sans-serif; background-color: var(--bg-dark); color: var(--text-main); padding-bottom: 80px; -webkit-tap-highlight-color: transparent; transition: background-color 0.3s, color 0.3s; }
+
+        /* =========================================
+           2. CSS - COMPONENTES SHELL (MATRIZ)
+           ========================================= */
+        .header { background: var(--bg-header); backdrop-filter: blur(10px); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border); transition: 0.3s; }
+        .view { display: none; padding: 20px; animation: fadeIn 0.3s ease; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .card { background: var(--bg-card); border-radius: 16px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border); transition: 0.3s; }
+        .btn-accent { background: var(--accent); color: #000; border: none; padding: 15px; border-radius: 12px; font-size: 15px; font-weight: 600; width: 100%; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; transition: 0.2s; }
+        .btn-accent:active { transform: scale(0.98); }
+        .btn-outline { background: transparent; border: 1px dashed var(--text-muted); color: var(--text-muted); padding: 12px; width: 100%; border-radius: 12px; margin-top: 15px; cursor: pointer; transition: 0.2s; }
+        .btn-outline:active { background: rgba(128,128,128,0.1); }
+        
+        .input-minimal { width: 100%; padding: 15px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-main); margin-bottom: 15px; box-sizing: border-box; font-family: 'Poppins'; outline: none; transition: 0.3s; }
+        .input-minimal:focus { border-color: var(--accent); }
+        
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: var(--bg-nav); backdrop-filter: blur(10px); display: flex; justify-content: space-around; padding: 10px 0 15px 0; border-top: 1px solid var(--border); z-index: 1000; transition: 0.3s; }
+        .nav-btn { background: transparent; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 5px; font-family: 'Poppins'; font-size: 11px; width: 25%; cursor: pointer; transition: 0.3s; }
+        .nav-btn.active { color: var(--accent); }
+        .nav-btn.active i { transform: translateY(-3px); }
+
+        #toast { visibility: hidden; min-width: 250px; background-color: var(--bg-input); color: var(--text-main); text-align: center; border-radius: 10px; padding: 15px; position: fixed; z-index: 3000; left: 50%; bottom: 100px; transform: translateX(-50%); border: 1px solid var(--accent); box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+
+        /* Modales */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: var(--bg-card); padding: 20px; border-radius: 16px; width: 100%; max-width: 350px; border: 1px solid var(--border); position: relative; transition: 0.3s; }
+        
+        /* Auth Screen */
+        #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; transition: 0.3s; }
+        .auth-box { background: var(--bg-card); padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 400px; border: 1px solid var(--accent); box-shadow: 0 10px 30px var(--accent-glow); }
+
+        /* =========================================
+           3. CSS - DISEÑOS DE MÓDULOS ESPECÍFICOS
+           ========================================= */
+        /* Módulo Servicios (Grid) */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .item-box { background: var(--bg-input); border: 1px solid var(--border); border-radius: 16px; padding: 25px 10px 15px 10px; text-align: center; position: relative; cursor: pointer; transition: 0.2s; }
+        .item-box:active { transform: scale(0.98); border-color: var(--accent); }
+        .btn-delete { position: absolute; top: 10px; right: 10px; background: rgba(239, 68, 68, 0.15); color: var(--danger); border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; justify-content: center; align-items: center; z-index: 10; transition: 0.2s; }
+        .btn-delete:active { background: var(--danger); color: white; transform: scale(0.9); }
+
+        /* Módulo Productos e Historial (Listas) */
+        .list-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg-input); padding: 12px 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 10px; position: relative; cursor: pointer; transition: 0.2s; }
+        .list-row:active { transform: scale(0.98); border-color: var(--accent); }
+        .floating-cart { margin-top: 15px; border-color: var(--accent); position: sticky; bottom: 85px; z-index: 90; box-shadow: 0 -10px 20px var(--bg-dark); }
+
+        /* Toggles (Switches) en Ajustes */
+        .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border); }
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #8b92a5; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(24px); }
+    </style>
+</head>
+<body>
+
+    <div id="auth-screen">
+        <div class="auth-box">
+            <i class="fas fa-cut" style="font-size: 40px; color: var(--accent); margin-bottom: 15px;"></i>
+            <h2 style="margin-top:0;">POS SaaS Pro</h2>
+            <p style="color: var(--text-muted); font-size: 13px;">Inicia sesión o registra tu barbería</p>
+            
+            <input type="text" id="auth-biz" class="input-minimal" placeholder="Nombre de tu Barbería">
+            <input type="email" id="auth-email" class="input-minimal" placeholder="Correo electrónico">
+            <input type="password" id="auth-pass" class="input-minimal" placeholder="Contraseña segura">
+            
+            <button class="btn-accent" id="btn-login" onclick="autenticarUsuario()"><i class="fas fa-sign-in-alt"></i> Ingresar al Sistema</button>
+        </div>
+    </div>
+
+    <div id="app-container" style="display: none;">
+        
+        <div class="header">
+            <div>
+                <h1 style="margin:0; font-size:16px; color:var(--accent);" id="display-biz-name">Mi Negocio</h1>
+                <span style="font-size:11px; color:var(--text-muted);" id="header-view-name">Servicios</span>
+            </div>
+            <div style="text-align: right;">
+                <div id="display-email" style="font-size:10px; color:var(--text-muted);"></div>
+                <div id="reloj" style="font-size: 12px; font-weight: 500; color: var(--text-main);"></div>
+            </div>
+        </div>
+
+        <div id="view-servicios" class="view active">
+            <div class="card" style="text-align: center; margin-bottom: 20px; background: rgba(212, 175, 55, 0.05); border-color: var(--accent);">
+                <p style="font-size: 12px; color: var(--accent); margin: 0; font-weight: 600;">CATÁLOGO DE SERVICIOS</p>
+                <p style="font-size: 10px; color: var(--text-muted); margin: 5px 0 0 0;">Toca un servicio para cobrarlo</p>
+            </div>
+            
+            <div class="grid-2" id="grid-servicios"></div>
+            
+            <button class="btn-outline" onclick="abrirFormulario('servicio')"><i class="fas fa-plus"></i> Añadir Nuevo Servicio</button>
+        </div>
+
+        <div id="view-productos" class="view">
+            <div id="lista-productos" style="padding-bottom: 10px;"></div>
+            <button class="btn-outline" onclick="abrirFormulario('producto')"><i class="fas fa-plus"></i> Añadir Producto</button>
+            
+            <div class="card floating-cart">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span style="color: var(--text-muted);">Artículos: <b id="cart-count" style="color: var(--text-main);">0</b></span>
+                    <span style="font-size: 18px; font-weight: 700; color: var(--accent);" id="cart-total">$0</span>
+                </div>
+                <button class="btn-accent" onclick="cobrarCarrito()"><i class="fas fa-shopping-cart"></i> Procesar Venta</button>
+            </div>
+        </div>
+
+        <div id="view-historial" class="view">
+            <div class="card" style="text-align: center; margin-bottom: 15px;">
+                <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Ingresos en Rango</p>
+                <h2 style="margin: 5px 0; color: var(--success);" id="total-filtro">$0</h2>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <input type="date" id="filtro-inicio" class="input-minimal" style="margin-bottom:0; padding:10px; font-size:12px;">
+                <input type="date" id="filtro-fin" class="input-minimal" style="margin-bottom:0; padding:10px; font-size:12px;">
+                <button class="btn-accent" style="width: auto; padding: 10px 15px;" onclick="renderHistorial()"><i class="fas fa-search"></i></button>
+            </div>
+
+            <div id="lista-historial"></div>
+        </div>
+
+        <div id="view-ajustes" class="view">
+            <div class="card">
+                <h3 style="margin-top: 0; font-size: 14px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">Cuenta SaaS Activa</h3>
+                <p style="font-size: 13px; color: var(--accent);"><i class="fas fa-user-circle"></i> <span id="ajustes-email"></span></p>
+                <button class="btn-outline" style="color: var(--danger); border-color: var(--danger);" onclick="cerrarSesion()"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión Segura</button>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top: 0; font-size: 14px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">Personalización</h3>
+                
+                <div class="toggle-row">
+                    <span style="font-size: 13px;"><i class="fas fa-sun" style="margin-right: 5px;"></i> Modo Claro</span>
+                    <label class="switch"><input type="checkbox" id="mod-theme-toggle" onchange="toggleLightMode()"><span class="slider"></span></label>
+                </div>
+
+                <div style="display:flex; gap:15px; justify-content:center; margin:15px 0;">
+                    <div style="width:35px; height:35px; border-radius:50%; cursor:pointer; background:#d4af37; border: 2px solid white;" onclick="cambiarTema('#d4af37', this)" class="color-dot"></div>
+                    <div style="width:35px; height:35px; border-radius:50%; cursor:pointer; background:#3b82f6; border: 2px solid transparent;" onclick="cambiarTema('#3b82f6', this)" class="color-dot"></div>
+                    <div style="width:35px; height:35px; border-radius:50%; cursor:pointer; background:#ef4444; border: 2px solid transparent;" onclick="cambiarTema('#ef4444', this)" class="color-dot"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top: 0; font-size: 14px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">Módulos Activos</h3>
+                <div class="toggle-row">
+                    <span style="font-size: 13px;">Módulo de Servicios</span>
+                    <label class="switch"><input type="checkbox" id="mod-serv" checked onchange="toggleModules()"><span class="slider"></span></label>
+                </div>
+                <div class="toggle-row">
+                    <span style="font-size: 13px;">Módulo POS Productos</span>
+                    <label class="switch"><input type="checkbox" id="mod-prod" checked onchange="toggleModules()"><span class="slider"></span></label>
+                </div>
+            </div>
+        </div>
+
+        <div id="modal-form" class="modal-overlay">
+            <div class="modal-content">
+                <button onclick="cerrarModal('modal-form')" style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--text-muted); font-size:18px; cursor:pointer;"><i class="fas fa-times"></i></button>
+                <h3 style="margin-top:0;" id="form-title">Añadir</h3>
+                <input type="hidden" id="form-type">
+                
+                <label class="form-label" style="font-size: 12px; color: var(--text-muted);">Nombre del Ítem</label>
+                <input type="text" id="form-name" class="input-minimal" placeholder="Ej: Corte Premium">
+                
+                <label class="form-label" style="font-size: 12px; color: var(--text-muted);">Precio Base ($)</label>
+                <input type="number" id="form-price" class="input-minimal" placeholder="Ej: 25000" min="0">
+                
+                <label class="form-label" id="lbl-detail" style="font-size: 12px; color: var(--text-muted);">Detalle adicional</label>
+                <input type="text" id="form-detail" class="input-minimal" placeholder="Ej: 45 min / Cod: 123">
+                
+                <button class="btn-accent" onclick="guardarItem()"><i class="fas fa-save"></i> Guardar Seguro</button>
+            </div>
+        </div>
+
+        <div id="pos-modal" class="modal-overlay">
+            <div class="modal-content" style="text-align: center;">
+                <button onclick="cerrarModal('pos-modal')" style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--text-muted); font-size:18px; cursor:pointer;"><i class="fas fa-times"></i></button>
+                <h3 style="margin-top:0;" id="pos-title">Cobrar</h3>
+                <p id="pos-subtitle" style="color:var(--text-muted); font-size: 13px;"></p>
+                
+                <label class="form-label" style="text-align:center; font-size: 12px; color: var(--text-muted);">Monto a Cobrar</label>
+                <input type="number" id="pos-price" class="input-minimal" style="font-size:24px; font-weight:bold; text-align:center; color:var(--accent);" min="0">
+                
+                <button class="btn-accent" onclick="procesarCobro()"><i class="fas fa-check"></i> Confirmar Operación</button>
+            </div>
+        </div>
+
+        <div class="bottom-nav">
+            <button class="nav-btn active" id="btn-nav-serv" onclick="switchView('view-servicios', this, 'Servicios')"><i class="fas fa-cut"></i><span>Servicios</span></button>
+            <button class="nav-btn" id="btn-nav-prod" onclick="switchView('view-productos', this, 'POS Productos')"><i class="fas fa-shopping-bag"></i><span>POS</span></button>
+            <button class="nav-btn" onclick="switchView('view-historial', this, 'Historial')"><i class="fas fa-receipt"></i><span>Historial</span></button>
+            <button class="nav-btn" onclick="switchView('view-ajustes', this, 'Ajustes')"><i class="fas fa-cog"></i><span>Ajustes</span></button>
+        </div>
+
+    </div>
+
+    <div id="toast"></div>
+
+    <script>
+        // --- CONSTANTES Y PREPARACIÓN CLOUD ---
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyg3ZDE6N86MvcM_Fo8gl_q4_IGeQPyRRB8b_USamD5379tXHS9o5N7ocPfvD11Tcro/exec";
+
+        // --- BLINDAJE ANTI-XSS CORREGIDO ---
+        function sanitize(str) {
+            if (typeof str !== 'string') return str;
+            return str.replace(/[&<>"'/]/ig, (m) => ({ '&': '&', '<': '<', '>': '>', '"': '"', "'": ''', "/": '/' }[m]));
+        }
+
+        // --- ESTADO GLOBAL (App Data) ---
+        let appData = { 
+            email: '', bizName: '', dbId: '', theme: '#d4af37', lightMode: false,
+            servicios: [], productos: [], historial: [], 
+            carrito: { cantidad: 0, total: 0 } 
+        };
+        let posCurrentAction = { tipo: '', id: null };
+
+        // --- 1. INICIALIZACIÓN Y AUTH PERSISTENTE ---
+        window.onload = () => {
+            let session = localStorage.getItem('posSaaS_Session');
+            if(session) {
+                appData = Object.assign(appData, JSON.parse(session)); 
+                iniciarApp();
+            }
+            setInterval(actualizarReloj, 60000);
+            actualizarReloj();
+        };
+
+        function autenticarUsuario() {
+            let biz = document.getElementById('auth-biz').value.trim();
+            let email = document.getElementById('auth-email').value.trim().toLowerCase();
+            let pass = document.getElementById('auth-pass').value.trim();
+
+            if(!biz || !email || !pass) return mostrarToast("⚠️ Llena todos los campos");
+            if(pass.length < 6) return mostrarToast("⚠️ Contraseña mínima 6 caracteres");
+
+            let btnLogin = document.getElementById('btn-login');
+            let originalText = btnLogin.innerHTML;
+            btnLogin.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conectando...';
+            btnLogin.disabled = true;
+
+            let payload = {
+                action: "registro_login",
+                email: email,
+                password: pass,
+                bizName: biz
+            };
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(payload)
+            })
+            .then(response => response.json())
+            .then(data => {
+                btnLogin.innerHTML = originalText;
+                btnLogin.disabled = false;
+
+                if (data.success) {
+                    appData.email = sanitize(email);
+                    appData.bizName = sanitize(biz);
+                    
+                    if(data.data && data.data.dbId) {
+                        appData.dbId = data.data.dbId;
+                    }
+                    
+                    guardarLocales();
+                    iniciarApp();
+                    mostrarToast("✅ " + data.message);
+                } else {
+                    mostrarToast("❌ Error: " + data.message);
+                }
+            })
+            .catch(error => {
+                btnLogin.innerHTML = originalText;
+                btnLogin.disabled = false;
+                mostrarToast("❌ Error de conexión con la nube");
+                console.error("Fetch Error:", error);
+            });
+        }
+
+        function iniciarApp() {
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('app-container').style.display = 'block';
+            
+            document.getElementById('display-biz-name').innerText = appData.bizName;
+            document.getElementById('display-email').innerText = appData.email;
+            document.getElementById('ajustes-email').innerText = appData.email;
+            
+            aplicarTema(appData.theme);
+            if(appData.lightMode) {
+                document.body.classList.add('light-mode');
+                document.getElementById('mod-theme-toggle').checked = true;
+            }
+
+            renderAll();
+        }
+
+        function cerrarSesion() {
+            localStorage.removeItem('posSaaS_Session');
+            location.reload();
+        }
+
+        function guardarLocales() {
+            localStorage.setItem('posSaaS_Session', JSON.stringify(appData));
+        }
+
+        function sincronizarVentaCloud() {
+            if (!appData.dbId) return; 
+            let payload = { action: "sync_historial", dbId: appData.dbId, historial: appData.historial };
+            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', redirect: 'follow', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
+            .then(res => res.json())
+            .then(data => { if(data.success) console.log("Sincronización Exitosa: " + data.message); })
+            .catch(err => console.error("Error Fetch Sync:", err));
+        }
+
+        // --- 2. NAVEGACIÓN MATRIZ ---
+        function switchView(viewId, btnElement, title) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(viewId).classList.add('active');
+            if(btnElement) btnElement.classList.add('active');
+            document.getElementById('header-view-name').innerText = title;
+        }
+
+        function actualizarReloj() {
+            document.getElementById('reloj').innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        function renderAll() { 
+            renderServicios(); 
+            renderProductos(); 
+            renderHistorial(); 
+        }
+
+        // --- 3. MÓDULO SERVICIOS ---
+        function renderServicios() {
+            let html = '';
+            if (appData.servicios.length === 0) {
+                document.getElementById('grid-servicios').innerHTML = `<p style="grid-column: span 2; text-align: center; color: var(--text-muted); font-size: 12px;">Sin servicios registrados.</p>`;
+                return;
+            }
+
+            appData.servicios.forEach(s => {
+                let sName = sanitize(s.nombre);
+                let sDet = sanitize(s.detalle || 'Sin detalle');
+                html += `
+                <div class="item-box" onclick="abrirPOS('SERVICIO', ${s.id})">
+                    <button class="btn-delete" onclick="event.stopPropagation(); eliminarItem('servicio', ${s.id})"><i class="fas fa-trash"></i></button>
+                    <i class="fas fa-cut" style="font-size:24px; color:var(--accent); margin-bottom:10px; display:block;"></i>
+                    <span style="font-size:13px; font-weight:600; display:block; margin-bottom: 5px;">${sName}</span>
+                    <span style="font-size:11px; color:var(--text-muted); display:block; margin-bottom: 5px;"><i class="far fa-clock"></i> ${sDet}</span>
+                    <span style="color:var(--text-muted); font-size:12px; font-weight:600;">$${s.precio.toLocaleString('es-CO')}</span>
+                </div>`;
+            });
+            document.getElementById('grid-servicios').innerHTML = html;
+        }
+
+        // --- 4. MÓDULO PRODUCTOS ---
+        function renderProductos() {
+            let html = '';
+            if (appData.productos.length === 0) {
+                document.getElementById('lista-productos').innerHTML = `<p style="text-align: center; color: var(--text-muted); font-size: 12px;">Sin productos registrados.</p>`;
+                return;
+            }
+
+            appData.productos.forEach(p => {
+                let pName = sanitize(p.nombre);
+                let pDet = sanitize(p.detalle || 'Stock/Cod');
+                html += `
+                <div class="list-row" onclick="abrirPOS('PRODUCTO', ${p.id})">
+                    <button class="btn-delete" style="top:15px; right: 10px; position:absolute;" onclick="event.stopPropagation(); eliminarItem('producto', ${p.id})"><i class="fas fa-trash"></i></button>
+                    <div style="flex:1;">
+                        <div style="font-size: 14px; font-weight:600;">${pName}</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top:3px;">${pDet}</div>
+                    </div>
+                    <div style="text-align: right; padding-right:45px;">
+                        <div style="color: var(--accent); font-weight: bold;">$${p.precio.toLocaleString('es-CO')}</div>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('lista-productos').innerHTML = html;
+        }
+
+        // --- 5. MÓDULO HISTORIAL ---
+        function registrarEnHistorial(desc, monto, tipoStr) {
+            let now = new Date();
+            appData.historial.push({ 
+                id: Date.now(), 
+                fechaISO: now.toISOString().split('T')[0], 
+                hora: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), 
+                desc: sanitize(desc), 
+                monto: monto, 
+                tipo: tipoStr 
+            });
+            guardarLocales(); 
+            renderHistorial();
+            sincronizarVentaCloud(); 
+        }
+
+        function renderHistorial() {
+            let html = ''; 
+            let total = 0;
+            let fechaInicio = document.getElementById('filtro-inicio').value;
+            let fechaFin = document.getElementById('filtro-fin').value;
+            
+            let historiaInvertida = [...appData.historial].reverse();
+
+            historiaInvertida.forEach(h => {
+                let mostrar = true;
+                if(fechaInicio && h.fechaISO < fechaInicio) mostrar = false;
+                if(fechaFin && h.fechaISO > fechaFin) mostrar = false;
+
+                if(mostrar) {
+                    total += h.monto;
+                    let icon = h.tipo === 'servicio' ? 'fa-cut' : 'fa-shopping-bag';
+                    html += `
+                    <div class="list-row" style="cursor: default;">
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <div style="background: var(--bg-card); padding: 10px; border-radius: 10px;"><i class="fas ${icon}" style="color:var(--text-muted);"></i></div>
+                            <div>
+                                <div style="font-size:13px; font-weight:600;">${h.desc}</div>
+                                <div style="font-size:10px; color:var(--text-muted); margin-top:3px;">${h.fechaISO} | ${h.hora}</div>
+                            </div>
+                        </div>
+                        <div style="font-weight:bold; color:var(--success);">+$${h.monto.toLocaleString('es-CO')}</div>
+                    </div>`;
+                }
+            });
+            
+            document.getElementById('lista-historial').innerHTML = html || '<p style="text-align:center; color:gray; font-size:12px;">No hay ventas registradas en este periodo.</p>';
+            document.getElementById('total-filtro').innerText = `$${total.toLocaleString('es-CO')}`;
+        }
+
+        // --- 6. LOGICA CRUD Y POS ---
+        function abrirFormulario(tipo) {
+            document.getElementById('form-type').value = tipo;
+            document.getElementById('form-title').innerText = tipo === 'servicio' ? 'Nuevo Servicio' : 'Nuevo Producto';
+            document.getElementById('lbl-detail').innerText = tipo === 'servicio' ? 'Duración (Ej: 40 min)' : 'Detalle/Stock (Ej: Cod 01)';
+            document.getElementById('form-name').value = ''; 
+            document.getElementById('form-price').value = '';
+            document.getElementById('form-detail').value = '';
+            document.getElementById('modal-form').classList.add('active');
+        }
+
+        function guardarItem() {
+            let tipo = document.getElementById('form-type').value;
+            let item = {
+                id: Date.now(),
+                nombre: sanitize(document.getElementById('form-name').value.trim()),
+                precio: parseInt(document.getElementById('form-price').value),
+                detalle: sanitize(document.getElementById('form-detail').value.trim())
+            };
+            if(!item.nombre || isNaN(item.precio)) return mostrarToast("⚠️ Llena el nombre y precio válido");
+            
+            if(tipo === 'servicio') appData.servicios.push(item);
+            else appData.productos.push(item);
+            
+            guardarLocales(); renderAll(); cerrarModal('modal-form'); mostrarToast("✅ Guardado con éxito");
+            sincronizarItemCloud(item, tipo);
+        }
+
+        function sincronizarItemCloud(itemData, tipoItem) {
+            if (!appData.dbId) return; 
+            let payload = { action: "sync_item", dbId: appData.dbId, tipo: tipoItem, item: itemData };
+            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', redirect: 'follow', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
+            .then(res => res.json())
+            .then(data => { if(data.success) console.log("Ítem en la nube:", data.message); })
+            .catch(err => console.error("Error conexión ítem:", err));
+        }
+
+        function eliminarItem(tipo, id) {
+            if(confirm("⚠️ ¿Eliminar este elemento permanentemente?")) {
+                if(tipo === 'servicio') appData.servicios = appData.servicios.filter(s => s.id !== id);
+                else appData.productos = appData.productos.filter(p => p.id !== id);
+                guardarLocales(); renderAll(); mostrarToast("🗑️ Elemento eliminado");
+            }
+        }
+
+        function abrirPOS(tipo, id) {
+            posCurrentAction = { tipo, id };
+            let item = tipo === 'SERVICIO' ? appData.servicios.find(s => s.id === id) : appData.productos.find(p => p.id === id);
+            document.getElementById('pos-title').innerText = tipo === 'SERVICIO' ? 'Cobrar Servicio' : 'Añadir al Carrito';
+            document.getElementById('pos-subtitle').innerText = sanitize(item.nombre);
+            document.getElementById('pos-price').value = item.precio;
+            document.getElementById('pos-modal').classList.add('active');
+        }
+
+        function procesarCobro() {
+            let precio = parseInt(document.getElementById('pos-price').value);
+            if(isNaN(precio) || precio < 0) return mostrarToast("⚠️ Monto inválido");
+
+            let item = posCurrentAction.tipo === 'SERVICIO' ? appData.servicios.find(s => s.id === posCurrentAction.id) : appData.productos.find(p => p.id === posCurrentAction.id);
+            
+            if(posCurrentAction.tipo === 'SERVICIO') {
+                registrarEnHistorial(item.nombre, precio, 'servicio');
+                mostrarToast("✅ Servicio Cobrado");
+            } else {
+                appData.carrito.cantidad += 1; appData.carrito.total += precio;
+                document.getElementById('cart-count').innerText = appData.carrito.cantidad;
+                document.getElementById('cart-total').innerText = `$${appData.carrito.total.toLocaleString('es-CO')}`;
+                mostrarToast("🛒 Añadido al carrito");
+            }
+            cerrarModal('pos-modal');
+        }
+
+        function cobrarCarrito() {
+            if(appData.carrito.cantidad === 0) return mostrarToast("⚠️ Carrito vacío");
+            registrarEnHistorial(`Venta POS (${appData.carrito.cantidad} items)`, appData.carrito.total, 'producto');
+            appData.carrito = { cantidad: 0, total: 0 };
+            document.getElementById('cart-count').innerText = "0"; 
+            document.getElementById('cart-total').innerText = "$0";
+            mostrarToast("✅ Venta de productos procesada");
+        }
+
+        // --- 7. MÓDULO AJUSTES FUNCIONES ---
+        function cambiarTema(color, element) {
+            document.documentElement.style.setProperty('--accent', color);
+            appData.theme = color;
+            guardarLocales();
+            
+            document.querySelectorAll('.color-dot').forEach(el => el.style.borderColor = 'transparent');
+            if(element) element.style.borderColor = 'white';
+        }
+
+        function toggleLightMode() {
+            let isLight = document.getElementById('mod-theme-toggle').checked;
+            appData.lightMode = isLight;
+            if(isLight) document.body.classList.add('light-mode');
+            else document.body.classList.remove('light-mode');
+            guardarLocales();
+        }
+
+        function toggleModules() {
+            let servActivo = document.getElementById('mod-serv').checked;
+            let prodActivo = document.getElementById('mod-prod').checked;
+            document.getElementById('btn-nav-serv').style.display = servActivo ? 'flex' : 'none';
+            document.getElementById('btn-nav-prod').style.display = prodActivo ? 'flex' : 'none';
+        }
+
+        // --- 8. HELPERS GLOBALES ---
+        function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
+        function mostrarToast(msg) { 
+            let t = document.getElementById("toast"); 
+            t.innerText = msg; 
+            t.className = "show"; 
+            setTimeout(() => { t.className = t.className.replace("show", ""); }, 3000); 
+        }
+        
+        function aplicarTema(color) {
+            document.documentElement.style.setProperty('--accent', color);
+        }
+    </script>
+</body>
+</html>
