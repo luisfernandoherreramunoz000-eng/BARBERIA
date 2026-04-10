@@ -21,7 +21,6 @@
             --danger: #ef4444; --success: #10b981; --border: #2a2e39; 
         }
 
-        /* --- MODO CLARO --- */
         body.light-mode {
             --bg-dark: #f4f6f8; --bg-card: #ffffff; --bg-input: #eef2f6; 
             --bg-header: rgba(244, 246, 248, 0.95); --bg-nav: rgba(255, 255, 255, 0.95);
@@ -31,9 +30,6 @@
 
         body { margin: 0; font-family: 'Poppins', sans-serif; background-color: var(--bg-dark); color: var(--text-main); padding-bottom: 80px; -webkit-tap-highlight-color: transparent; transition: background-color 0.3s, color 0.3s; }
 
-        /* =========================================
-           2. CSS - COMPONENTES SHELL (MATRIZ)
-           ========================================= */
         .header { background: var(--bg-header); backdrop-filter: blur(10px); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border); transition: 0.3s; }
         .view { display: none; padding: 20px; animation: fadeIn 0.3s ease; }
         .view.active { display: block; }
@@ -56,21 +52,16 @@
         #toast { visibility: hidden; min-width: 250px; background-color: var(--bg-input); color: var(--text-main); text-align: center; border-radius: 10px; padding: 15px; position: fixed; z-index: 3000; left: 50%; bottom: 100px; transform: translateX(-50%); border: 1px solid var(--accent); box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
 
-        /* Modales */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
         .modal-overlay.active { display: flex; }
         .modal-content { background: var(--bg-card); padding: 20px; border-radius: 16px; width: 100%; max-width: 350px; border: 1px solid var(--border); position: relative; transition: 0.3s; }
         
-        /* Auth Screen & Tabs */
         #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; transition: 0.3s; }
         .auth-box { background: var(--bg-card); padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 400px; border: 1px solid var(--accent); box-shadow: 0 10px 30px var(--accent-glow); transition: 0.3s; }
         .auth-tabs { display: flex; background: var(--bg-input); border-radius: 10px; padding: 5px; margin-bottom: 20px; }
         .auth-tab { flex: 1; background: transparent; border: none; color: var(--text-muted); padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-family: 'Poppins'; font-size: 13px; font-weight: 500; }
         .auth-tab.active { background: var(--bg-card); color: var(--text-main); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
 
-        /* =========================================
-           3. CSS - DISEÑOS DE MÓDULOS ESPECÍFICOS
-           ========================================= */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .item-box { background: var(--bg-input); border: 1px solid var(--border); border-radius: 16px; padding: 25px 10px 15px 10px; text-align: center; position: relative; cursor: pointer; transition: 0.2s; }
         .item-box:active { transform: scale(0.98); border-color: var(--accent); }
@@ -237,7 +228,7 @@
 
         function sanitize(str) {
             if (typeof str !== 'string') return str;
-            return str.replace(/[&<>"'/]/ig, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', "/": '&#x2F;' }[m]));
+            return str.replace(/[&<>"'/]/ig, (m) => ({ '&': '&', '<': '<', '>': '>', '"': '"', "'": ''', "/": '/' }[m]));
         }
 
         // --- ESTADO GLOBAL (App Data) ---
@@ -271,7 +262,6 @@
             actualizarReloj();
         };
 
-        // --- LÓGICA DE TABS UI EN LOGIN ---
         function setAuthMode(mode) {
             currentAuthMode = mode;
             let tabLogin = document.getElementById('tab-login');
@@ -311,26 +301,29 @@
             }
         }
 
-        // NUEVO PARSER BLINDADO: Extrae las listas sin importar cómo las envíe Google Scripts
+        // --- EXTRACCIÓN BLINDADA (Ignora mayúsculas de Google Sheets y fuerza lectura) ---
         function extractArraySafely(key, sourceObj) {
-            if (!sourceObj || !(key in sourceObj)) return null;
-            let val = sourceObj[key];
-            if (!val) return null;
-            
-            // Si Google lo envió como texto/string por accidente
-            if (typeof val === 'string') {
-                try { val = JSON.parse(val); } 
-                catch(e) { 
-                    try { val = JSON.parse(val.replace(/'/g, '"')); } // Intento de limpiar comillas simples
-                    catch(e2) { return null; }
+            try {
+                if (!sourceObj) return null;
+                // Busca la llave en minúscula (precio) o con la primera mayúscula (Precio)
+                let val = sourceObj[key] || sourceObj[key.charAt(0).toUpperCase() + key.slice(1)];
+                if (val === undefined || val === null) return null;
+
+                if (typeof val === 'string') {
+                    if (val.trim() === "") return [];
+                    try { return JSON.parse(val); } catch(e) {}
+                    try { return JSON.parse(val.replace(/'/g, '"')); } catch(e) {}
+                    try {
+                        let evalData = eval('(' + val + ')');
+                        if (Array.isArray(evalData)) return evalData;
+                    } catch(e) {}
                 }
-            }
-            // Si ya es un array válido, lo devolvemos
-            if (Array.isArray(val)) return val;
-            // Si Google lo envolvió en un objeto raro
-            if (typeof val === 'object') return Object.values(val);
-            
-            return null; // Si todo falla, devuelve null para no sobreescribir la lista local
+
+                if (Array.isArray(val)) return val;
+                if (typeof val === 'object') return Object.values(val);
+
+            } catch(e) { console.error("Error parseando " + key, e); }
+            return null;
         }
 
         function autenticarUsuario() {
@@ -351,16 +344,10 @@
             btnLogin.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conectando...';
             btnLogin.disabled = true;
 
-            let payload = {
-                action: "registro_login",
-                email: email,
-                password: pass,
-                bizName: biz 
-            };
+            let payload = { action: "registro_login", email: email, password: pass, bizName: biz };
 
             fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                redirect: 'follow',
+                method: 'POST', redirect: 'follow',
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(payload)
             })
@@ -373,14 +360,10 @@
                     appData.email = sanitize(email);
                     appData.bizName = sanitize(biz);
                     
-                    // LÓGICA CORREGIDA: Buscamos la data donde sea que Google la haya puesto (en data.data o en data)
                     let source = data.data || data || {};
-                    
                     if(source) {
                         appData.dbId = source.dbId || appData.dbId;
                         
-                        // Solo actualizamos las listas de la App SI la nube envió datos válidos. 
-                        // Si no envió nada, mantenemos lo que ya teníamos, evitando que se pongan en blanco.
                         let srv = extractArraySafely('servicios', source);
                         if(srv) appData.servicios = srv;
                         
@@ -393,7 +376,7 @@
                     
                     guardarLocales();
                     iniciarApp();
-                    mostrarToast("✅ " + data.message);
+                    mostrarToast("✅ Datos descargados de la nube");
                 } else {
                     mostrarToast("❌ Error: " + data.message);
                 }
@@ -402,7 +385,6 @@
                 btnLogin.innerHTML = originalText;
                 btnLogin.disabled = false;
                 mostrarToast("❌ Error de conexión con la nube");
-                console.error("Fetch Error:", error);
             });
         }
 
@@ -420,6 +402,7 @@
                 document.getElementById('mod-theme-toggle').checked = true;
             }
 
+            // AQUI OCURRE EL DIBUJO PROTEGIDO
             renderAll();
         }
 
@@ -435,8 +418,7 @@
         function sincronizarVentaCloud() {
             if (!appData.dbId) return; 
             let payload = { action: "sync_historial", dbId: appData.dbId, historial: appData.historial };
-            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', redirect: 'follow', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
-            .catch(err => console.error("Error Fetch Sync:", err));
+            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', redirect: 'follow', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }).catch(e=>e);
         }
 
         function switchView(viewId, btnElement, title) {
@@ -458,23 +440,30 @@
             renderHistorial(); 
         }
 
+        // --- DIBUJADO PROTEGIDO CONTRA ERRORES DE GOOGLE SHEETS ---
         function renderServicios() {
             let html = '';
-            if (!appData.servicios || appData.servicios.length === 0) {
-                document.getElementById('grid-servicios').innerHTML = `<p style="grid-column: span 2; text-align: center; color: var(--text-muted); font-size: 12px;">Sin servicios registrados.</p>`;
+            if (!appData.servicios || !Array.isArray(appData.servicios) || appData.servicios.length === 0) {
+                document.getElementById('grid-servicios').innerHTML = `<p style="grid-column: span 2; text-align: center; color: var(--text-muted); font-size: 12px;">Tu base de datos de servicios está vacía.</p>`;
                 return;
             }
 
             appData.servicios.forEach(s => {
-                let sName = sanitize(s.nombre);
-                let sDet = sanitize(s.detalle || 'Sin detalle');
+                // Soportamos llaves en mayúscula o minúscula que vengan de Google
+                let sName = sanitize(s.nombre || s.Nombre || 'Sin nombre');
+                let sDet = sanitize(s.detalle || s.Detalle || 'Sin detalle');
+                let sId = s.id || s.Id || Date.now();
+                
+                // PROTECCIÓN CRÍTICA: Forzamos que sea un Número sí o sí. Evita el "Crash" de pantalla blanca.
+                let vPrecio = Number(s.precio || s.Precio || 0);
+
                 html += `
-                <div class="item-box" onclick="abrirPOS('SERVICIO', ${s.id})">
-                    <button class="btn-delete" onclick="event.stopPropagation(); eliminarItem('servicio', ${s.id})"><i class="fas fa-trash"></i></button>
+                <div class="item-box" onclick="abrirPOS('SERVICIO', ${sId})">
+                    <button class="btn-delete" onclick="event.stopPropagation(); eliminarItem('servicio', ${sId})"><i class="fas fa-trash"></i></button>
                     <i class="fas fa-cut" style="font-size:24px; color:var(--accent); margin-bottom:10px; display:block;"></i>
                     <span style="font-size:13px; font-weight:600; display:block; margin-bottom: 5px;">${sName}</span>
                     <span style="font-size:11px; color:var(--text-muted); display:block; margin-bottom: 5px;"><i class="far fa-clock"></i> ${sDet}</span>
-                    <span style="color:var(--text-muted); font-size:12px; font-weight:600;">$${s.precio.toLocaleString('es-CO')}</span>
+                    <span style="color:var(--text-muted); font-size:12px; font-weight:600;">$${vPrecio.toLocaleString('es-CO')}</span>
                 </div>`;
             });
             document.getElementById('grid-servicios').innerHTML = html;
@@ -482,23 +471,26 @@
 
         function renderProductos() {
             let html = '';
-            if (!appData.productos || appData.productos.length === 0) {
-                document.getElementById('lista-productos').innerHTML = `<p style="text-align: center; color: var(--text-muted); font-size: 12px;">Sin productos registrados.</p>`;
+            if (!appData.productos || !Array.isArray(appData.productos) || appData.productos.length === 0) {
+                document.getElementById('lista-productos').innerHTML = `<p style="text-align: center; color: var(--text-muted); font-size: 12px;">Tu base de datos de productos está vacía.</p>`;
                 return;
             }
 
             appData.productos.forEach(p => {
-                let pName = sanitize(p.nombre);
-                let pDet = sanitize(p.detalle || 'Stock/Cod');
+                let pName = sanitize(p.nombre || p.Nombre || 'Sin nombre');
+                let pDet = sanitize(p.detalle || p.Detalle || 'Stock/Cod');
+                let pId = p.id || p.Id || Date.now();
+                let vPrecio = Number(p.precio || p.Precio || 0);
+
                 html += `
-                <div class="list-row" onclick="abrirPOS('PRODUCTO', ${p.id})">
-                    <button class="btn-delete" style="top:15px; right: 10px; position:absolute;" onclick="event.stopPropagation(); eliminarItem('producto', ${p.id})"><i class="fas fa-trash"></i></button>
+                <div class="list-row" onclick="abrirPOS('PRODUCTO', ${pId})">
+                    <button class="btn-delete" style="top:15px; right: 10px; position:absolute;" onclick="event.stopPropagation(); eliminarItem('producto', ${pId})"><i class="fas fa-trash"></i></button>
                     <div style="flex:1;">
                         <div style="font-size: 14px; font-weight:600;">${pName}</div>
                         <div style="font-size: 11px; color: var(--text-muted); margin-top:3px;">${pDet}</div>
                     </div>
                     <div style="text-align: right; padding-right:45px;">
-                        <div style="color: var(--accent); font-weight: bold;">$${p.precio.toLocaleString('es-CO')}</div>
+                        <div style="color: var(--accent); font-weight: bold;">$${vPrecio.toLocaleString('es-CO')}</div>
                     </div>
                 </div>`;
             });
@@ -526,27 +518,33 @@
             let fechaInicio = document.getElementById('filtro-inicio').value;
             let fechaFin = document.getElementById('filtro-fin').value;
             
-            if (!appData.historial) appData.historial = [];
+            if (!appData.historial || !Array.isArray(appData.historial)) appData.historial = [];
             let historiaInvertida = [...appData.historial].reverse();
 
             historiaInvertida.forEach(h => {
+                let hDesc = sanitize(h.desc || h.Desc || h.descripcion || 'Venta');
+                let hFecha = sanitize(h.fechaISO || h.FechaISO || h.fecha || 'Sin fecha');
+                let hHora = sanitize(h.hora || h.Hora || '');
+                let vMonto = Number(h.monto || h.Monto || 0);
+                let hTipo = h.tipo || h.Tipo || 'servicio';
+
                 let mostrar = true;
-                if(fechaInicio && h.fechaISO < fechaInicio) mostrar = false;
-                if(fechaFin && h.fechaISO > fechaFin) mostrar = false;
+                if(fechaInicio && hFecha < fechaInicio) mostrar = false;
+                if(fechaFin && hFecha > fechaFin) mostrar = false;
 
                 if(mostrar) {
-                    total += h.monto;
-                    let icon = h.tipo === 'servicio' ? 'fa-cut' : 'fa-shopping-bag';
+                    total += vMonto;
+                    let icon = hTipo === 'servicio' ? 'fa-cut' : 'fa-shopping-bag';
                     html += `
                     <div class="list-row" style="cursor: default;">
                         <div style="display:flex; gap:10px; align-items:center;">
                             <div style="background: var(--bg-card); padding: 10px; border-radius: 10px;"><i class="fas ${icon}" style="color:var(--text-muted);"></i></div>
                             <div>
-                                <div style="font-size:13px; font-weight:600;">${h.desc}</div>
-                                <div style="font-size:10px; color:var(--text-muted); margin-top:3px;">${h.fechaISO} | ${h.hora}</div>
+                                <div style="font-size:13px; font-weight:600;">${hDesc}</div>
+                                <div style="font-size:10px; color:var(--text-muted); margin-top:3px;">${hFecha} | ${hHora}</div>
                             </div>
                         </div>
-                        <div style="font-weight:bold; color:var(--success);">+$${h.monto.toLocaleString('es-CO')}</div>
+                        <div style="font-weight:bold; color:var(--success);">+$${vMonto.toLocaleString('es-CO')}</div>
                     </div>`;
                 }
             });
@@ -570,15 +568,15 @@
             let item = {
                 id: Date.now(),
                 nombre: sanitize(document.getElementById('form-name').value.trim()),
-                precio: parseInt(document.getElementById('form-price').value),
+                precio: Number(document.getElementById('form-price').value),
                 detalle: sanitize(document.getElementById('form-detail').value.trim())
             };
-            if(!item.nombre || isNaN(item.precio)) return mostrarToast("⚠️ Llena el nombre y precio válido");
+            if(!item.nombre || isNaN(item.precio)) return mostrarToast("⚠️ Llena el nombre y un precio válido");
             
             if(tipo === 'servicio') appData.servicios.push(item);
             else appData.productos.push(item);
             
-            guardarLocales(); renderAll(); cerrarModal('modal-form'); mostrarToast("✅ Guardado con éxito");
+            guardarLocales(); renderAll(); cerrarModal('modal-form'); mostrarToast("✅ Guardado localmente");
             sincronizarItemCloud(item, tipo);
         }
 
@@ -591,29 +589,30 @@
 
         function eliminarItem(tipo, id) {
             if(confirm("⚠️ ¿Eliminar este elemento permanentemente?")) {
-                if(tipo === 'servicio') appData.servicios = appData.servicios.filter(s => s.id !== id);
-                else appData.productos = appData.productos.filter(p => p.id !== id);
+                if(tipo === 'servicio') appData.servicios = appData.servicios.filter(s => (s.id || s.Id) !== id);
+                else appData.productos = appData.productos.filter(p => (p.id || p.Id) !== id);
                 guardarLocales(); renderAll(); mostrarToast("🗑️ Elemento eliminado");
             }
         }
 
         function abrirPOS(tipo, id) {
             posCurrentAction = { tipo, id };
-            let item = tipo === 'SERVICIO' ? appData.servicios.find(s => s.id === id) : appData.productos.find(p => p.id === id);
+            let item = tipo === 'SERVICIO' ? appData.servicios.find(s => (s.id || s.Id) === id) : appData.productos.find(p => (p.id || p.Id) === id);
             document.getElementById('pos-title').innerText = tipo === 'SERVICIO' ? 'Cobrar Servicio' : 'Añadir al Carrito';
-            document.getElementById('pos-subtitle').innerText = sanitize(item.nombre);
-            document.getElementById('pos-price').value = item.precio;
+            document.getElementById('pos-subtitle').innerText = sanitize(item.nombre || item.Nombre);
+            document.getElementById('pos-price').value = Number(item.precio || item.Precio || 0);
             document.getElementById('pos-modal').classList.add('active');
         }
 
         function procesarCobro() {
-            let precio = parseInt(document.getElementById('pos-price').value);
+            let precio = Number(document.getElementById('pos-price').value);
             if(isNaN(precio) || precio < 0) return mostrarToast("⚠️ Monto inválido");
 
-            let item = posCurrentAction.tipo === 'SERVICIO' ? appData.servicios.find(s => s.id === posCurrentAction.id) : appData.productos.find(p => p.id === posCurrentAction.id);
-            
+            let item = posCurrentAction.tipo === 'SERVICIO' ? appData.servicios.find(s => (s.id || s.Id) === posCurrentAction.id) : appData.productos.find(p => (p.id || p.Id) === posCurrentAction.id);
+            let iName = item.nombre || item.Nombre || 'Item';
+
             if(posCurrentAction.tipo === 'SERVICIO') {
-                registrarEnHistorial(item.nombre, precio, 'servicio');
+                registrarEnHistorial(iName, precio, 'servicio');
                 mostrarToast("✅ Servicio Cobrado");
             } else {
                 appData.carrito.cantidad += 1; appData.carrito.total += precio;
@@ -637,7 +636,6 @@
             document.documentElement.style.setProperty('--accent', color);
             appData.theme = color;
             guardarLocales();
-            
             document.querySelectorAll('.color-dot').forEach(el => el.style.borderColor = 'transparent');
             if(element) element.style.borderColor = 'white';
         }
@@ -664,10 +662,7 @@
             t.className = "show"; 
             setTimeout(() => { t.className = t.className.replace("show", ""); }, 3000); 
         }
-        
-        function aplicarTema(color) {
-            document.documentElement.style.setProperty('--accent', color);
-        }
+        function aplicarTema(color) { document.documentElement.style.setProperty('--accent', color); }
     </script>
 </body>
 </html>
