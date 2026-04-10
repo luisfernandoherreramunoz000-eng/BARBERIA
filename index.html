@@ -95,9 +95,10 @@
                 <button class="auth-tab" id="tab-register" onclick="setAuthMode('register')">Registrar Barbería</button>
             </div>
             
-            <input type="text" id="auth-biz" class="input-minimal" placeholder="ID de tu Barbería (Tu espacio)">
+            <input type="text" id="auth-biz" class="input-minimal" placeholder="Nombre de tu Nueva Barbería" style="display: none;">
+            
             <input type="email" id="auth-email" class="input-minimal" placeholder="Correo electrónico">
-            <input type="password" id="auth-pass" class="input-minimal" placeholder="Contraseña segura">
+            <input type="password" id="auth-pass" class="input-minimal" placeholder="Contraseña">
             
             <input type="password" id="auth-pass-confirm" class="input-minimal" placeholder="Confirmar contraseña" style="display: none;">
             
@@ -157,6 +158,13 @@
                 <h3 style="margin-top: 0; font-size: 14px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">Cuenta SaaS Activa</h3>
                 <p style="font-size: 13px; color: var(--accent);"><i class="fas fa-user-circle"></i> <span id="ajustes-email"></span></p>
                 <button class="btn-outline" style="color: var(--danger); border-color: var(--danger);" onclick="cerrarSesion()"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión Segura</button>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top: 0; font-size: 14px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">Seguridad</h3>
+                <input type="password" id="new-pass" class="input-minimal" placeholder="Nueva Contraseña" style="margin-top: 10px;">
+                <input type="password" id="conf-new-pass" class="input-minimal" placeholder="Confirmar Contraseña">
+                <button class="btn-accent" onclick="cambiarContrasenaApp()"><i class="fas fa-key"></i> Actualizar Contraseña</button>
             </div>
 
             <div class="card">
@@ -226,9 +234,11 @@
         // --- CONSTANTES Y PREPARACIÓN CLOUD ---
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyg3ZDE6N86MvcM_Fo8gl_q4_IGeQPyRRB8b_USamD5379tXHS9o5N7ocPfvD11Tcro/exec";
 
+        // ¡SINTAXIS CORREGIDA! Esto era lo que rompía GitHub Pages.
         function sanitize(str) {
             if (typeof str !== 'string') return str;
-            return str.replace(/[&<>"'/]/ig, (m) => ({ '&': '&', '<': '<', '>': '>', '"': '"', "'": ''', "/": '/' }[m]));
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', "/": '&#x2F;' };
+            return str.replace(/[&<>"'/]/ig, (m) => map[m]);
         }
 
         // --- ESTADO GLOBAL (App Data) ---
@@ -279,8 +289,12 @@
                 icon.className = 'fas fa-user-lock';
                 icon.style.color = 'var(--accent)';
                 title.innerText = 'Bienvenido de vuelta';
-                subtitle.innerText = 'Ingresa a tu cuenta existente';
-                inputBiz.placeholder = "ID de tu Barbería (Tu espacio)";
+                subtitle.innerText = 'Ingresa a tu cuenta';
+                
+                // OCULTAMOS EL CAMPO DEL NEGOCIO EN EL LOGIN
+                inputBiz.style.display = 'none';
+                inputBiz.value = '';
+                
                 passConfirm.style.display = 'none';
                 passConfirm.value = '';
                 btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar al Sistema';
@@ -293,7 +307,10 @@
                 icon.style.color = 'var(--success)';
                 title.innerText = 'Nuevo Negocio';
                 subtitle.innerText = 'Crea tu espacio en la nube';
-                inputBiz.placeholder = "Nombre de tu Nueva Barbería";
+                
+                // MOSTRAMOS EL CAMPO DEL NEGOCIO AL REGISTRAR
+                inputBiz.style.display = 'block';
+                
                 passConfirm.style.display = 'block';
                 btnSubmit.innerHTML = '<i class="fas fa-rocket"></i> Crear Cuenta';
                 btnSubmit.style.backgroundColor = 'var(--success)';
@@ -301,11 +318,9 @@
             }
         }
 
-        // --- EXTRACCIÓN BLINDADA (Ignora mayúsculas de Google Sheets y fuerza lectura) ---
         function extractArraySafely(key, sourceObj) {
             try {
                 if (!sourceObj) return null;
-                // Busca la llave en minúscula (precio) o con la primera mayúscula (Precio)
                 let val = sourceObj[key] || sourceObj[key.charAt(0).toUpperCase() + key.slice(1)];
                 if (val === undefined || val === null) return null;
 
@@ -332,11 +347,13 @@
             let pass = document.getElementById('auth-pass').value.trim();
             let passConfirm = document.getElementById('auth-pass-confirm').value.trim();
 
-            if(!biz || !email || !pass) return mostrarToast("⚠️ Llena todos los campos");
-            if(pass.length < 6) return mostrarToast("⚠️ Contraseña mínima 6 caracteres");
+            if(!email || !pass) return mostrarToast("⚠️ Llena el correo y la contraseña");
             
-            if(currentAuthMode === 'register' && pass !== passConfirm) {
-                return mostrarToast("⚠️ Las contraseñas no coinciden");
+            // Validaciones específicas de registro
+            if(currentAuthMode === 'register') {
+                if(!biz) return mostrarToast("⚠️ Ingresa el nombre de tu Barbería");
+                if(pass.length < 6) return mostrarToast("⚠️ Contraseña mínima 6 caracteres");
+                if(pass !== passConfirm) return mostrarToast("⚠️ Las contraseñas no coinciden");
             }
 
             let btnLogin = document.getElementById('btn-login');
@@ -344,7 +361,8 @@
             btnLogin.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conectando...';
             btnLogin.disabled = true;
 
-            let payload = { action: "registro_login", email: email, password: pass, bizName: biz };
+            // Enviamos el "mode" (login o register) para que el Script sepa qué hacer
+            let payload = { action: "registro_login", mode: currentAuthMode, email: email, password: pass, bizName: biz };
 
             fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST', redirect: 'follow',
@@ -358,11 +376,11 @@
 
                 if (data.success) {
                     appData.email = sanitize(email);
-                    appData.bizName = sanitize(biz);
                     
                     let source = data.data || data || {};
                     if(source) {
                         appData.dbId = source.dbId || appData.dbId;
+                        appData.bizName = sanitize(source.bizName || biz || appData.bizName); // Toma el negocio de la base de datos si es login
                         
                         let srv = extractArraySafely('servicios', source);
                         if(srv) appData.servicios = srv;
@@ -376,7 +394,7 @@
                     
                     guardarLocales();
                     iniciarApp();
-                    mostrarToast("✅ Datos descargados de la nube");
+                    mostrarToast("✅ Conexión exitosa");
                 } else {
                     mostrarToast("❌ Error: " + data.message);
                 }
@@ -388,11 +406,45 @@
             });
         }
 
+        // --- FUNCIÓN CAMBIAR CONTRASEÑA ---
+        function cambiarContrasenaApp() {
+            let pass = document.getElementById('new-pass').value.trim();
+            let conf = document.getElementById('conf-new-pass').value.trim();
+
+            if(!pass || pass.length < 6) return mostrarToast("⚠️ La contraseña debe tener mínimo 6 caracteres");
+            if(pass !== conf) return mostrarToast("⚠️ Las contraseñas no coinciden");
+
+            mostrarToast("⏳ Actualizando...");
+
+            let payload = {
+                action: "cambiar_contrasena",
+                email: appData.email,
+                newPassword: pass
+            };
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST', redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    mostrarToast("✅ Contraseña actualizada correctamente");
+                    document.getElementById('new-pass').value = '';
+                    document.getElementById('conf-new-pass').value = '';
+                } else {
+                    mostrarToast("❌ Error: " + (data.message || "No se pudo actualizar"));
+                }
+            })
+            .catch(e => mostrarToast("❌ Error de red al cambiar contraseña"));
+        }
+
         function iniciarApp() {
             document.getElementById('auth-screen').style.display = 'none';
             document.getElementById('app-container').style.display = 'block';
             
-            document.getElementById('display-biz-name').innerText = appData.bizName;
+            document.getElementById('display-biz-name').innerText = appData.bizName || 'Mi Negocio';
             document.getElementById('display-email').innerText = appData.email;
             document.getElementById('ajustes-email').innerText = appData.email;
             
@@ -402,7 +454,6 @@
                 document.getElementById('mod-theme-toggle').checked = true;
             }
 
-            // AQUI OCURRE EL DIBUJO PROTEGIDO
             renderAll();
         }
 
@@ -440,7 +491,6 @@
             renderHistorial(); 
         }
 
-        // --- DIBUJADO PROTEGIDO CONTRA ERRORES DE GOOGLE SHEETS ---
         function renderServicios() {
             let html = '';
             if (!appData.servicios || !Array.isArray(appData.servicios) || appData.servicios.length === 0) {
@@ -449,12 +499,9 @@
             }
 
             appData.servicios.forEach(s => {
-                // Soportamos llaves en mayúscula o minúscula que vengan de Google
                 let sName = sanitize(s.nombre || s.Nombre || 'Sin nombre');
                 let sDet = sanitize(s.detalle || s.Detalle || 'Sin detalle');
                 let sId = s.id || s.Id || Date.now();
-                
-                // PROTECCIÓN CRÍTICA: Forzamos que sea un Número sí o sí. Evita el "Crash" de pantalla blanca.
                 let vPrecio = Number(s.precio || s.Precio || 0);
 
                 html += `
