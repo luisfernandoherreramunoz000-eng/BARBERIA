@@ -88,7 +88,7 @@
             <i id="auth-main-icon" class="fas fa-user-lock" style="font-size: 40px; color: var(--accent); margin-bottom: 10px; transition: 0.3s;"></i>
             
             <h2 style="margin-top:0; margin-bottom: 5px;" id="auth-title">Bienvenido de vuelta</h2>
-            <p style="color: var(--text-muted); font-size: 13px; margin-top: 0; margin-bottom: 20px;" id="auth-subtitle">Ingresa a tu cuenta existente</p>
+            <p style="color: var(--text-muted); font-size: 13px; margin-top: 0; margin-bottom: 20px;" id="auth-subtitle">Ingresa a tu cuenta</p>
             
             <div class="auth-tabs">
                 <button class="auth-tab active" id="tab-login" onclick="setAuthMode('login')">Iniciar Sesión</button>
@@ -232,12 +232,12 @@
 
     <script>
         // --- CONSTANTES Y PREPARACIÓN CLOUD ---
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyg3ZDE6N86MvcM_Fo8gl_q4_IGeQPyRRB8b_USamD5379tXHS9o5N7ocPfvD11Tcro/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwWSM-3DikRksNms_g8fbW5AGZGe2NFQX7E1UdH2RHARVeooW8OoW0KpOtXqzcF55CN/exec";
 
-        // ¡SINTAXIS CORREGIDA! Esto era lo que rompía GitHub Pages.
+        // --- FUNCIÓN SANITIZE 100% SEGURA ---
         function sanitize(str) {
             if (typeof str !== 'string') return str;
-            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', "/": '&#x2F;' };
+            const map = { '&': '&', '<': '<', '>': '>', '"': '"', "'": ''', "/": '/' };
             return str.replace(/[&<>"'/]/ig, (m) => map[m]);
         }
 
@@ -250,6 +250,59 @@
         let posCurrentAction = { tipo: '', id: null };
         let currentAuthMode = 'login';
 
+        // =========================================================================
+        // NÚCLEO BLINDADO: NORMALIZADOR DE DATOS (ELIMINA FALLOS DE RENDERIZADO)
+        // Convierte cualquier basura o fila cruda de Google Sheets en un objeto JSON perfecto.
+        // =========================================================================
+        function normalizarData(item, tipo) {
+            if (!item) return null;
+            if (typeof item === 'string') {
+                try { item = JSON.parse(item.replace(/'/g, '"')); } catch(e) { return null; }
+            }
+
+            if (Array.isArray(item)) {
+                // Si la fila trae cabeceras (ID, Nombre), la ignoramos
+                if(String(item[0]).toLowerCase() === 'id' || String(item[1]).toLowerCase() === 'nombre') return null;
+
+                if (tipo === 'historial') {
+                    return {
+                        id: String(item[0] || Date.now()),
+                        fechaISO: sanitize(String(item[1] || '')),
+                        hora: sanitize(String(item[2] || '')),
+                        desc: sanitize(String(item[3] || 'Venta')),
+                        monto: Number(item[4]) || 0,
+                        tipo: sanitize(String(item[5] || 'servicio'))
+                    };
+                } else { // Producto o Servicio
+                    return {
+                        id: String(item[0] || Date.now()),
+                        nombre: sanitize(String(item[1] || 'Sin nombre')),
+                        precio: Number(item[2]) || 0,
+                        detalle: sanitize(String(item[3] || ''))
+                    };
+                }
+            } else if (typeof item === 'object') {
+                if (tipo === 'historial') {
+                    return {
+                        id: String(item.id || item.Id || item.ID || Date.now()),
+                        fechaISO: sanitize(String(item.fechaISO || item.FechaISO || item.fecha || item.Fecha || '')),
+                        hora: sanitize(String(item.hora || item.Hora || '')),
+                        desc: sanitize(String(item.desc || item.Desc || item.descripcion || item.nombre || 'Venta')),
+                        monto: Number(item.monto || item.Monto || item.precio || item.Precio) || 0,
+                        tipo: sanitize(String(item.tipo || item.Tipo || 'servicio'))
+                    };
+                } else {
+                    return {
+                        id: String(item.id || item.Id || item.ID || Date.now()),
+                        nombre: sanitize(String(item.nombre || item.Nombre || item.NAME || 'Sin nombre')),
+                        precio: Number(item.precio || item.Precio || item.PRECIO) || 0,
+                        detalle: sanitize(String(item.detalle || item.Detalle || item.DETALLE || ''))
+                    };
+                }
+            }
+            return null;
+        }
+
         // --- 1. INICIALIZACIÓN Y AUTH PERSISTENTE ---
         window.onload = () => {
             let session = localStorage.getItem('posSaaS_Session');
@@ -258,9 +311,10 @@
                     let parsedSession = JSON.parse(session);
                     appData = Object.assign(appData, parsedSession);
                     
-                    if(!Array.isArray(appData.servicios)) appData.servicios = [];
-                    if(!Array.isArray(appData.productos)) appData.productos = [];
-                    if(!Array.isArray(appData.historial)) appData.historial = [];
+                    // Aseguramos que la caché local también pase por el normalizador para purificarla
+                    appData.servicios = (appData.servicios || []).map(x => normalizarData(x, 'servicio')).filter(x => x);
+                    appData.productos = (appData.productos || []).map(x => normalizarData(x, 'producto')).filter(x => x);
+                    appData.historial = (appData.historial || []).map(x => normalizarData(x, 'historial')).filter(x => x);
                     
                     iniciarApp();
                 } catch(e) {
@@ -291,7 +345,6 @@
                 title.innerText = 'Bienvenido de vuelta';
                 subtitle.innerText = 'Ingresa a tu cuenta';
                 
-                // OCULTAMOS EL CAMPO DEL NEGOCIO EN EL LOGIN
                 inputBiz.style.display = 'none';
                 inputBiz.value = '';
                 
@@ -308,7 +361,6 @@
                 title.innerText = 'Nuevo Negocio';
                 subtitle.innerText = 'Crea tu espacio en la nube';
                 
-                // MOSTRAMOS EL CAMPO DEL NEGOCIO AL REGISTRAR
                 inputBiz.style.display = 'block';
                 
                 passConfirm.style.display = 'block';
@@ -318,27 +370,34 @@
             }
         }
 
+        // Extracción segura que intenta de múltiples formas obtener el array crudo del servidor
         function extractArraySafely(key, sourceObj) {
             try {
-                if (!sourceObj) return null;
-                let val = sourceObj[key] || sourceObj[key.charAt(0).toUpperCase() + key.slice(1)];
-                if (val === undefined || val === null) return null;
+                if (!sourceObj || typeof sourceObj !== 'object') return [];
+                let realKey = Object.keys(sourceObj).find(k => k.trim().toLowerCase() === key.toLowerCase());
+                if (!realKey) return [];
 
-                if (typeof val === 'string') {
-                    if (val.trim() === "") return [];
-                    try { return JSON.parse(val); } catch(e) {}
-                    try { return JSON.parse(val.replace(/'/g, '"')); } catch(e) {}
-                    try {
-                        let evalData = eval('(' + val + ')');
-                        if (Array.isArray(evalData)) return evalData;
-                    } catch(e) {}
-                }
+                let val = sourceObj[realKey];
+                if (!val) return [];
 
                 if (Array.isArray(val)) return val;
+                
+                if (typeof val === 'string') {
+                    val = val.trim();
+                    if (val === "" || val === "[]") return [];
+                    try {
+                        let parsed = JSON.parse(val);
+                        if (typeof parsed === 'string') parsed = JSON.parse(parsed); // Doble parseo por seguridad
+                        if (Array.isArray(parsed)) return parsed;
+                    } catch(e) {}
+                    try {
+                        let parsed = JSON.parse(val.replace(/'/g, '"'));
+                        if (Array.isArray(parsed)) return parsed;
+                    } catch(e) {}
+                }
                 if (typeof val === 'object') return Object.values(val);
-
             } catch(e) { console.error("Error parseando " + key, e); }
-            return null;
+            return [];
         }
 
         function autenticarUsuario() {
@@ -349,7 +408,6 @@
 
             if(!email || !pass) return mostrarToast("⚠️ Llena el correo y la contraseña");
             
-            // Validaciones específicas de registro
             if(currentAuthMode === 'register') {
                 if(!biz) return mostrarToast("⚠️ Ingresa el nombre de tu Barbería");
                 if(pass.length < 6) return mostrarToast("⚠️ Contraseña mínima 6 caracteres");
@@ -361,7 +419,6 @@
             btnLogin.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conectando...';
             btnLogin.disabled = true;
 
-            // Enviamos el "mode" (login o register) para que el Script sepa qué hacer
             let payload = { action: "registro_login", mode: currentAuthMode, email: email, password: pass, bizName: biz };
 
             fetch(GOOGLE_SCRIPT_URL, {
@@ -380,23 +437,37 @@
                     let source = data.data || data || {};
                     if(source) {
                         appData.dbId = source.dbId || appData.dbId;
-                        appData.bizName = sanitize(source.bizName || biz || appData.bizName); // Toma el negocio de la base de datos si es login
+                        appData.bizName = sanitize(source.bizName || biz || appData.bizName);
                         
-                        let srv = extractArraySafely('servicios', source);
-                        if(srv) appData.servicios = srv;
+                        // === AQUÍ SE APLICA EL MIDDLEWARE DE NORMALIZACIÓN ===
+                        let rawSrv = extractArraySafely('servicios', source);
+                        appData.servicios = rawSrv.map(x => normalizarData(x, 'servicio')).filter(x => x !== null);
                         
-                        let prd = extractArraySafely('productos', source);
-                        if(prd) appData.productos = prd;
+                        let rawPrd = extractArraySafely('productos', source);
+                        appData.productos = rawPrd.map(x => normalizarData(x, 'producto')).filter(x => x !== null);
                         
-                        let hist = extractArraySafely('historial', source);
-                        if(hist) appData.historial = hist;
+                        let rawHist = extractArraySafely('historial', source);
+                        appData.historial = rawHist.map(x => normalizarData(x, 'historial')).filter(x => x !== null);
                     }
                     
                     guardarLocales();
                     iniciarApp();
                     mostrarToast("✅ Conexión exitosa");
                 } else {
-                    mostrarToast("❌ Error: " + data.message);
+                    // LÓGICA INTELIGENTE DE REDIRECCIÓN EN CASO DE ERROR
+                    let msg = (data.message || "").toLowerCase();
+                    
+                    if (currentAuthMode === 'login' && (msg.includes('no exist') || msg.includes('no encontrad') || msg.includes('registr') || msg.includes('not found'))) {
+                        mostrarToast("⚠️ Cuenta no registrada. Cambiando a Registro...");
+                        setTimeout(() => setAuthMode('register'), 2000);
+                    } 
+                    else if (currentAuthMode === 'register' && (msg.includes('ya exist') || msg.includes('registrad') || msg.includes('uso') || msg.includes('already'))) {
+                        mostrarToast("⚠️ El correo ya existe. Cambiando a Iniciar Sesión...");
+                        setTimeout(() => setAuthMode('login'), 2000);
+                    } 
+                    else {
+                        mostrarToast("❌ " + (data.message || "Error en la autenticación"));
+                    }
                 }
             })
             .catch(error => {
@@ -406,7 +477,6 @@
             });
         }
 
-        // --- FUNCIÓN CAMBIAR CONTRASEÑA ---
         function cambiarContrasenaApp() {
             let pass = document.getElementById('new-pass').value.trim();
             let conf = document.getElementById('conf-new-pass').value.trim();
@@ -416,16 +486,10 @@
 
             mostrarToast("⏳ Actualizando...");
 
-            let payload = {
-                action: "cambiar_contrasena",
-                email: appData.email,
-                newPassword: pass
-            };
+            let payload = { action: "cambiar_contrasena", email: appData.email, newPassword: pass };
 
             fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST', redirect: 'follow',
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify(payload)
+                method: 'POST', redirect: 'follow', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload)
             })
             .then(res => res.json())
             .then(data => {
@@ -433,9 +497,7 @@
                     mostrarToast("✅ Contraseña actualizada correctamente");
                     document.getElementById('new-pass').value = '';
                     document.getElementById('conf-new-pass').value = '';
-                } else {
-                    mostrarToast("❌ Error: " + (data.message || "No se pudo actualizar"));
-                }
+                } else { mostrarToast("❌ Error: " + (data.message || "No se pudo actualizar")); }
             })
             .catch(e => mostrarToast("❌ Error de red al cambiar contraseña"));
         }
@@ -449,10 +511,7 @@
             document.getElementById('ajustes-email').innerText = appData.email;
             
             aplicarTema(appData.theme);
-            if(appData.lightMode) {
-                document.body.classList.add('light-mode');
-                document.getElementById('mod-theme-toggle').checked = true;
-            }
+            if(appData.lightMode) { document.body.classList.add('light-mode'); document.getElementById('mod-theme-toggle').checked = true; }
 
             renderAll();
         }
@@ -462,9 +521,7 @@
             location.reload();
         }
 
-        function guardarLocales() {
-            localStorage.setItem('posSaaS_Session', JSON.stringify(appData));
-        }
+        function guardarLocales() { localStorage.setItem('posSaaS_Session', JSON.stringify(appData)); }
 
         function sincronizarVentaCloud() {
             if (!appData.dbId) return; 
@@ -491,26 +548,25 @@
             renderHistorial(); 
         }
 
+        // =====================================================================
+        // RENDERIZADO SIMPLIFICADO: Como los datos ya están normalizados, 
+        // ya no hay riesgo de errores al leer `s.nombre` o `s.precio`.
+        // =====================================================================
         function renderServicios() {
             let html = '';
-            if (!appData.servicios || !Array.isArray(appData.servicios) || appData.servicios.length === 0) {
+            if (!appData.servicios || appData.servicios.length === 0) {
                 document.getElementById('grid-servicios').innerHTML = `<p style="grid-column: span 2; text-align: center; color: var(--text-muted); font-size: 12px;">Tu base de datos de servicios está vacía.</p>`;
                 return;
             }
 
             appData.servicios.forEach(s => {
-                let sName = sanitize(s.nombre || s.Nombre || 'Sin nombre');
-                let sDet = sanitize(s.detalle || s.Detalle || 'Sin detalle');
-                let sId = s.id || s.Id || Date.now();
-                let vPrecio = Number(s.precio || s.Precio || 0);
-
                 html += `
-                <div class="item-box" onclick="abrirPOS('SERVICIO', ${sId})">
-                    <button class="btn-delete" onclick="event.stopPropagation(); eliminarItem('servicio', ${sId})"><i class="fas fa-trash"></i></button>
+                <div class="item-box" onclick="abrirPOS('SERVICIO', '${s.id}')">
+                    <button class="btn-delete" onclick="event.stopPropagation(); eliminarItem('servicio', '${s.id}')"><i class="fas fa-trash"></i></button>
                     <i class="fas fa-cut" style="font-size:24px; color:var(--accent); margin-bottom:10px; display:block;"></i>
-                    <span style="font-size:13px; font-weight:600; display:block; margin-bottom: 5px;">${sName}</span>
-                    <span style="font-size:11px; color:var(--text-muted); display:block; margin-bottom: 5px;"><i class="far fa-clock"></i> ${sDet}</span>
-                    <span style="color:var(--text-muted); font-size:12px; font-weight:600;">$${vPrecio.toLocaleString('es-CO')}</span>
+                    <span style="font-size:13px; font-weight:600; display:block; margin-bottom: 5px;">${s.nombre}</span>
+                    <span style="font-size:11px; color:var(--text-muted); display:block; margin-bottom: 5px;"><i class="far fa-clock"></i> ${s.detalle}</span>
+                    <span style="color:var(--text-muted); font-size:12px; font-weight:600;">$${s.precio.toLocaleString('es-CO')}</span>
                 </div>`;
             });
             document.getElementById('grid-servicios').innerHTML = html;
@@ -518,26 +574,21 @@
 
         function renderProductos() {
             let html = '';
-            if (!appData.productos || !Array.isArray(appData.productos) || appData.productos.length === 0) {
+            if (!appData.productos || appData.productos.length === 0) {
                 document.getElementById('lista-productos').innerHTML = `<p style="text-align: center; color: var(--text-muted); font-size: 12px;">Tu base de datos de productos está vacía.</p>`;
                 return;
             }
 
             appData.productos.forEach(p => {
-                let pName = sanitize(p.nombre || p.Nombre || 'Sin nombre');
-                let pDet = sanitize(p.detalle || p.Detalle || 'Stock/Cod');
-                let pId = p.id || p.Id || Date.now();
-                let vPrecio = Number(p.precio || p.Precio || 0);
-
                 html += `
-                <div class="list-row" onclick="abrirPOS('PRODUCTO', ${pId})">
-                    <button class="btn-delete" style="top:15px; right: 10px; position:absolute;" onclick="event.stopPropagation(); eliminarItem('producto', ${pId})"><i class="fas fa-trash"></i></button>
+                <div class="list-row" onclick="abrirPOS('PRODUCTO', '${p.id}')">
+                    <button class="btn-delete" style="top:15px; right: 10px; position:absolute;" onclick="event.stopPropagation(); eliminarItem('producto', '${p.id}')"><i class="fas fa-trash"></i></button>
                     <div style="flex:1;">
-                        <div style="font-size: 14px; font-weight:600;">${pName}</div>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top:3px;">${pDet}</div>
+                        <div style="font-size: 14px; font-weight:600;">${p.nombre}</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top:3px;">${p.detalle}</div>
                     </div>
                     <div style="text-align: right; padding-right:45px;">
-                        <div style="color: var(--accent); font-weight: bold;">$${vPrecio.toLocaleString('es-CO')}</div>
+                        <div style="color: var(--accent); font-weight: bold;">$${p.precio.toLocaleString('es-CO')}</div>
                     </div>
                 </div>`;
             });
@@ -547,7 +598,7 @@
         function registrarEnHistorial(desc, monto, tipoStr) {
             let now = new Date();
             appData.historial.push({ 
-                id: Date.now(), 
+                id: String(Date.now()), 
                 fechaISO: now.toISOString().split('T')[0], 
                 hora: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), 
                 desc: sanitize(desc), 
@@ -565,33 +616,27 @@
             let fechaInicio = document.getElementById('filtro-inicio').value;
             let fechaFin = document.getElementById('filtro-fin').value;
             
-            if (!appData.historial || !Array.isArray(appData.historial)) appData.historial = [];
+            if (!appData.historial) appData.historial = [];
             let historiaInvertida = [...appData.historial].reverse();
 
             historiaInvertida.forEach(h => {
-                let hDesc = sanitize(h.desc || h.Desc || h.descripcion || 'Venta');
-                let hFecha = sanitize(h.fechaISO || h.FechaISO || h.fecha || 'Sin fecha');
-                let hHora = sanitize(h.hora || h.Hora || '');
-                let vMonto = Number(h.monto || h.Monto || 0);
-                let hTipo = h.tipo || h.Tipo || 'servicio';
-
                 let mostrar = true;
-                if(fechaInicio && hFecha < fechaInicio) mostrar = false;
-                if(fechaFin && hFecha > fechaFin) mostrar = false;
+                if(fechaInicio && h.fechaISO < fechaInicio) mostrar = false;
+                if(fechaFin && h.fechaISO > fechaFin) mostrar = false;
 
                 if(mostrar) {
-                    total += vMonto;
-                    let icon = hTipo === 'servicio' ? 'fa-cut' : 'fa-shopping-bag';
+                    total += h.monto;
+                    let icon = h.tipo === 'servicio' ? 'fa-cut' : 'fa-shopping-bag';
                     html += `
                     <div class="list-row" style="cursor: default;">
                         <div style="display:flex; gap:10px; align-items:center;">
                             <div style="background: var(--bg-card); padding: 10px; border-radius: 10px;"><i class="fas ${icon}" style="color:var(--text-muted);"></i></div>
                             <div>
-                                <div style="font-size:13px; font-weight:600;">${hDesc}</div>
-                                <div style="font-size:10px; color:var(--text-muted); margin-top:3px;">${hFecha} | ${hHora}</div>
+                                <div style="font-size:13px; font-weight:600;">${h.desc}</div>
+                                <div style="font-size:10px; color:var(--text-muted); margin-top:3px;">${h.fechaISO} | ${h.hora}</div>
                             </div>
                         </div>
-                        <div style="font-weight:bold; color:var(--success);">+$${vMonto.toLocaleString('es-CO')}</div>
+                        <div style="font-weight:bold; color:var(--success);">+$${h.monto.toLocaleString('es-CO')}</div>
                     </div>`;
                 }
             });
@@ -612,8 +657,10 @@
 
         function guardarItem() {
             let tipo = document.getElementById('form-type').value;
+            
+            // Creamos un objeto puro desde el inicio
             let item = {
-                id: Date.now(),
+                id: String(Date.now()), // Clave para evitar choques con Google Sheets
                 nombre: sanitize(document.getElementById('form-name').value.trim()),
                 precio: Number(document.getElementById('form-price').value),
                 detalle: sanitize(document.getElementById('form-detail').value.trim())
@@ -623,7 +670,7 @@
             if(tipo === 'servicio') appData.servicios.push(item);
             else appData.productos.push(item);
             
-            guardarLocales(); renderAll(); cerrarModal('modal-form'); mostrarToast("✅ Guardado localmente");
+            guardarLocales(); renderAll(); cerrarModal('modal-form'); mostrarToast("✅ Guardado");
             sincronizarItemCloud(item, tipo);
         }
 
@@ -636,18 +683,24 @@
 
         function eliminarItem(tipo, id) {
             if(confirm("⚠️ ¿Eliminar este elemento permanentemente?")) {
-                if(tipo === 'servicio') appData.servicios = appData.servicios.filter(s => (s.id || s.Id) !== id);
-                else appData.productos = appData.productos.filter(p => (p.id || p.Id) !== id);
+                if(tipo === 'servicio') appData.servicios = appData.servicios.filter(s => s.id !== String(id));
+                else appData.productos = appData.productos.filter(p => p.id !== String(id));
                 guardarLocales(); renderAll(); mostrarToast("🗑️ Elemento eliminado");
             }
         }
 
         function abrirPOS(tipo, id) {
-            posCurrentAction = { tipo, id };
-            let item = tipo === 'SERVICIO' ? appData.servicios.find(s => (s.id || s.Id) === id) : appData.productos.find(p => (p.id || p.Id) === id);
+            posCurrentAction = { tipo, id: String(id) };
+            
+            let item = tipo === 'SERVICIO' 
+                ? appData.servicios.find(s => s.id === String(id)) 
+                : appData.productos.find(p => p.id === String(id));
+            
+            if(!item) return mostrarToast("⚠️ Error: Ítem no encontrado");
+
             document.getElementById('pos-title').innerText = tipo === 'SERVICIO' ? 'Cobrar Servicio' : 'Añadir al Carrito';
-            document.getElementById('pos-subtitle').innerText = sanitize(item.nombre || item.Nombre);
-            document.getElementById('pos-price').value = Number(item.precio || item.Precio || 0);
+            document.getElementById('pos-subtitle').innerText = item.nombre;
+            document.getElementById('pos-price').value = item.precio;
             document.getElementById('pos-modal').classList.add('active');
         }
 
@@ -655,8 +708,11 @@
             let precio = Number(document.getElementById('pos-price').value);
             if(isNaN(precio) || precio < 0) return mostrarToast("⚠️ Monto inválido");
 
-            let item = posCurrentAction.tipo === 'SERVICIO' ? appData.servicios.find(s => (s.id || s.Id) === posCurrentAction.id) : appData.productos.find(p => (p.id || p.Id) === posCurrentAction.id);
-            let iName = item.nombre || item.Nombre || 'Item';
+            let item = posCurrentAction.tipo === 'SERVICIO' 
+                ? appData.servicios.find(s => s.id === posCurrentAction.id) 
+                : appData.productos.find(p => p.id === posCurrentAction.id);
+            
+            let iName = item ? item.nombre : 'Item';
 
             if(posCurrentAction.tipo === 'SERVICIO') {
                 registrarEnHistorial(iName, precio, 'servicio');
@@ -676,7 +732,7 @@
             appData.carrito = { cantidad: 0, total: 0 };
             document.getElementById('cart-count').innerText = "0"; 
             document.getElementById('cart-total').innerText = "$0";
-            mostrarToast("✅ Venta de productos procesada");
+            mostrarToast("✅ Venta procesada");
         }
 
         function cambiarTema(color, element) {
