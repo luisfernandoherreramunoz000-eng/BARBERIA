@@ -288,7 +288,7 @@
         // --- FUNCIÓN SANITIZE REPARADA ---
         function sanitize(str) {
             if (typeof str !== 'string') return str;
-            const map = { '&': '&', '<': '<', '>': '>', '"': '"', "'": ''', "/": '/' };
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', "/": '&#x2F;' };
             return str.replace(/[&<>"'/]/ig, (m) => map[m]);
         }
 
