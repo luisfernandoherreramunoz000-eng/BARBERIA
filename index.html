@@ -3,18 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com https://script.google.com https://script.googleusercontent.com;">
     <title>SaaS POS Barber Pro</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     
     <style>
+        /* =========================================
+           1. CSS - VARIABLES Y TEMA PREMIUM OSCURO
+           ========================================= */
         :root { 
             --bg-dark: #0f1115; --bg-card: #1c1f26; --bg-input: #252932; 
             --bg-header: rgba(15, 17, 21, 0.95); --bg-nav: rgba(28, 31, 38, 0.95);
             --accent: #d4af37; --accent-glow: rgba(212, 175, 55, 0.2); 
             --text-main: #ffffff; --text-muted: #8b92a5; 
             --danger: #ef4444; --success: #10b981; --border: #2a2e39; 
+            --wa-color: #25D366;
         }
 
         body.light-mode {
@@ -32,13 +38,23 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
         .card { background: var(--bg-card); border-radius: 16px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border); transition: 0.3s; }
+        
         .btn-accent { background: var(--accent); color: #000; border: none; padding: 15px; border-radius: 12px; font-size: 15px; font-weight: 600; width: 100%; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; transition: 0.2s; }
         .btn-accent:active { transform: scale(0.98); }
+        .btn-wa { background: var(--wa-color); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s; flex: 1;}
+        .btn-wa:active { transform: scale(0.98); }
         .btn-outline { background: transparent; border: 1px dashed var(--text-muted); color: var(--text-muted); padding: 12px; width: 100%; border-radius: 12px; margin-top: 15px; cursor: pointer; transition: 0.2s; }
         .btn-outline:active { background: rgba(128,128,128,0.1); }
         
         .input-minimal { width: 100%; padding: 15px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-main); margin-bottom: 15px; box-sizing: border-box; font-family: 'Poppins'; outline: none; transition: 0.3s; }
         .input-minimal:focus { border-color: var(--accent); }
+
+        .search-container { display: flex; gap: 10px; margin-bottom: 15px; }
+        .search-box { position: relative; flex: 1; }
+        .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        .search-input { padding-left: 40px; margin-bottom: 0; width: 100%; box-sizing: border-box; }
+        .btn-scan { background: var(--bg-input); border: 1px solid var(--border); color: var(--accent); padding: 0 20px; border-radius: 10px; font-size: 18px; cursor: pointer; transition: 0.2s; }
+        .btn-scan:active { background: var(--accent); color: #000; }
         
         .bottom-nav { position: fixed; bottom: 0; width: 100%; background: var(--bg-nav); backdrop-filter: blur(10px); display: flex; justify-content: space-around; padding: 10px 0 15px 0; border-top: 1px solid var(--border); z-index: 1000; transition: 0.3s; }
         .nav-btn { background: transparent; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 5px; font-family: 'Poppins'; font-size: 11px; width: 25%; cursor: pointer; transition: 0.3s; }
@@ -61,12 +77,20 @@
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .item-box { background: var(--bg-input); border: 1px solid var(--border); border-radius: 16px; padding: 25px 10px 15px 10px; text-align: center; position: relative; cursor: pointer; transition: 0.2s; }
         .item-box:active { transform: scale(0.98); border-color: var(--accent); }
-        .btn-delete { position: absolute; top: 10px; right: 10px; background: rgba(239, 68, 68, 0.15); color: var(--danger); border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; justify-content: center; align-items: center; z-index: 10; transition: 0.2s; }
-        .btn-delete:active { background: var(--danger); color: white; transform: scale(0.9); }
-
+        
         .list-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg-input); padding: 12px 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 10px; position: relative; cursor: pointer; transition: 0.2s; }
         .list-row:active { transform: scale(0.98); border-color: var(--accent); }
+        
+        .btn-delete { position: absolute; top: 10px; right: 10px; background: rgba(239, 68, 68, 0.15); color: var(--danger); border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; justify-content: center; align-items: center; z-index: 10; transition: 0.2s; }
+        .btn-delete:active { background: var(--danger); color: white; transform: scale(0.9); }
+        .btn-add-stock { position: absolute; top: 10px; right: 48px; background: rgba(16, 185, 129, 0.15); color: var(--success); border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; justify-content: center; align-items: center; z-index: 10; transition: 0.2s; }
+
+        .stock-badge { position: absolute; top: -8px; left: 15px; background: var(--bg-card); border: 1px solid var(--border); font-size: 10px; padding: 2px 8px; border-radius: 10px; color: var(--text-muted); font-weight: bold; z-index: 5; }
+        .stock-badge.low { border-color: var(--danger); color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+
         .floating-cart { margin-top: 15px; border-color: var(--accent); position: sticky; bottom: 85px; z-index: 90; box-shadow: 0 -10px 20px var(--bg-dark); }
+        #reader { background: black; border-radius: 8px; overflow: hidden; margin-bottom: 15px;}
+        #reader video { object-fit: cover; }
 
         .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border); }
         .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
@@ -125,14 +149,26 @@
         </div>
 
         <div id="view-productos" class="view">
+            <div class="search-container">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="search-prod" class="input-minimal search-input" placeholder="Buscar producto o código..." onkeyup="renderProductos()">
+                </div>
+                <button class="btn-scan" onclick="abrirScanner()"><i class="fas fa-qrcode"></i></button>
+            </div>
+
             <div id="lista-productos" style="padding-bottom: 10px;"></div>
             <button class="btn-outline" onclick="abrirFormulario('producto')"><i class="fas fa-plus"></i> Añadir Producto</button>
+            
             <div class="card floating-cart">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                     <span style="color: var(--text-muted);">Artículos: <b id="cart-count" style="color: var(--text-main);">0</b></span>
                     <span style="font-size: 18px; font-weight: 700; color: var(--accent);" id="cart-total">$0</span>
                 </div>
-                <button class="btn-accent" onclick="cobrarCarrito()"><i class="fas fa-shopping-cart"></i> Procesar Venta</button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-wa" onclick="generarCotizacionWA()"><i class="fab fa-whatsapp"></i> Cotizar</button>
+                    <button class="btn-accent" style="flex: 2;" onclick="cobrarCarrito()"><i class="fas fa-shopping-cart"></i> Procesar Venta</button>
+                </div>
             </div>
         </div>
 
@@ -196,11 +232,30 @@
                 <input type="hidden" id="form-type">
                 <label class="form-label" style="font-size: 12px; color: var(--text-muted);">Nombre del Ítem</label>
                 <input type="text" id="form-name" class="input-minimal" placeholder="Ej: Corte Premium">
-                <label class="form-label" style="font-size: 12px; color: var(--text-muted);">Precio Base ($)</label>
-                <input type="number" id="form-price" class="input-minimal" placeholder="Ej: 25000" min="0">
+                
+                <div style="display: flex; gap:10px;">
+                    <div style="flex: 1;">
+                        <label class="form-label" style="font-size: 12px; color: var(--text-muted);">Precio Base ($)</label>
+                        <input type="number" id="form-price" class="input-minimal" placeholder="Ej: 25000" min="0">
+                    </div>
+                    <div style="flex: 1;" id="container-stock">
+                        <label class="form-label" style="font-size: 12px; color: var(--text-muted);">Stock</label>
+                        <input type="number" id="form-stock" class="input-minimal" placeholder="Opcional" min="0">
+                    </div>
+                </div>
+
                 <label class="form-label" id="lbl-detail" style="font-size: 12px; color: var(--text-muted);">Detalle adicional</label>
                 <input type="text" id="form-detail" class="input-minimal" placeholder="Ej: 45 min / Cod: 123">
                 <button class="btn-accent" onclick="guardarItem()"><i class="fas fa-save"></i> Guardar Seguro</button>
+            </div>
+        </div>
+
+        <div id="modal-scanner" class="modal-overlay">
+            <div class="modal-content" style="text-align: center;">
+                <h3 style="margin-top: 0; color: var(--accent);">Escanear Producto</h3>
+                <p style="font-size: 12px; color: var(--text-muted);">Apunta la cámara al código de barras o QR.</p>
+                <div id="reader"></div>
+                <button class="btn-outline" onclick="cerrarScanner()">Cancelar</button>
             </div>
         </div>
 
@@ -227,24 +282,25 @@
     <div id="toast"></div>
 
     <script>
-        // --- CONSTANTES Y PREPARACIÓN CLOUD ---
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw1LfqO2W5U02i1YnLGl_WeNoBY8DeOv0LTaOb-0YBNLZWSiVyQa59uUp2BnAx95BI/exec";
+        // --- CONSTANTES Y PREPARACIÓN CLOUD (NUEVA URL APLICADA) ---
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyHHuS1jcjAdB3hh6rZ4nbjnjrL9hmDYSRD2tSgjdA00xkUuRZUJrz_UA942bUuQSux/exec";
 
-        // --- FUNCIÓN SANITIZE 100% SEGURA ---
+        // --- FUNCIÓN SANITIZE REPARADA ---
         function sanitize(str) {
             if (typeof str !== 'string') return str;
-            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', "/": '&#x2F;' };
+            const map = { '&': '&', '<': '<', '>': '>', '"': '"', "'": ''', "/": '/' };
             return str.replace(/[&<>"'/]/ig, (m) => map[m]);
         }
 
-        // --- ESTADO GLOBAL (App Data) ---
+        // --- ESTADO GLOBAL (App Data Mejorado para Carrito con Items) ---
         let appData = { 
             email: '', bizName: '', dbId: '', theme: '#d4af37', lightMode: false,
             servicios: [], productos: [], historial: [], 
-            carrito: { cantidad: 0, total: 0 } 
+            carrito: { items: [], total: 0 } 
         };
         let posCurrentAction = { tipo: '', id: null };
         let currentAuthMode = 'login';
+        let html5QrcodeScanner;
 
         // =========================================================================
         // NÚCLEO BLINDADO: NORMALIZADOR DE DATOS
@@ -267,12 +323,13 @@
                         monto: Number(item[4]) || 0,
                         tipo: sanitize(String(item[5] || 'servicio'))
                     };
-                } else {
+                } else { 
                     return {
                         id: String(item[0] || Date.now()),
                         nombre: sanitize(String(item[1] || 'Sin nombre')),
                         precio: Number(item[2]) || 0,
-                        detalle: sanitize(String(item[3] || ''))
+                        detalle: sanitize(String(item[3] || '')),
+                        stock: Number(item[4]) || 0
                     };
                 }
             } else if (typeof item === 'object') {
@@ -290,7 +347,8 @@
                         id: String(item.id || item.Id || item.ID || Date.now()),
                         nombre: sanitize(String(item.nombre || item.Nombre || item.NAME || 'Sin nombre')),
                         precio: Number(item.precio || item.Precio || item.PRECIO) || 0,
-                        detalle: sanitize(String(item.detalle || item.Detalle || item.DETALLE || ''))
+                        detalle: sanitize(String(item.detalle || item.Detalle || item.DETALLE || '')),
+                        stock: Number(item.stock || item.Stock) || 0
                     };
                 }
             }
@@ -305,6 +363,8 @@
                     let parsedSession = JSON.parse(session);
                     appData = Object.assign(appData, parsedSession);
                     
+                    if(!appData.carrito.items) appData.carrito = { items: [], total: 0 };
+
                     appData.servicios = (appData.servicios || []).map(x => normalizarData(x, 'servicio')).filter(x => x);
                     appData.productos = (appData.productos || []).map(x => normalizarData(x, 'producto')).filter(x => x);
                     appData.historial = (appData.historial || []).map(x => normalizarData(x, 'historial')).filter(x => x);
@@ -331,35 +391,19 @@
             let passConfirm = document.getElementById('auth-pass-confirm');
 
             if (mode === 'login') {
-                tabLogin.classList.add('active');
-                tabReg.classList.remove('active');
-                icon.className = 'fas fa-user-lock';
-                icon.style.color = 'var(--accent)';
-                title.innerText = 'Bienvenido de vuelta';
-                subtitle.innerText = 'Ingresa a tu cuenta';
-                
-                inputBiz.style.display = 'none';
-                inputBiz.value = '';
-                
-                passConfirm.style.display = 'none';
-                passConfirm.value = '';
+                tabLogin.classList.add('active'); tabReg.classList.remove('active');
+                icon.className = 'fas fa-user-lock'; icon.style.color = 'var(--accent)';
+                title.innerText = 'Bienvenido de vuelta'; subtitle.innerText = 'Ingresa a tu cuenta';
+                inputBiz.style.display = 'none'; passConfirm.style.display = 'none';
                 btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar al Sistema';
-                btnSubmit.style.backgroundColor = 'var(--accent)';
-                btnSubmit.style.color = '#000';
+                btnSubmit.style.backgroundColor = 'var(--accent)'; btnSubmit.style.color = '#000';
             } else {
-                tabReg.classList.add('active');
-                tabLogin.classList.remove('active');
-                icon.className = 'fas fa-store';
-                icon.style.color = 'var(--success)';
-                title.innerText = 'Nuevo Negocio';
-                subtitle.innerText = 'Crea tu espacio en la nube';
-                
-                inputBiz.style.display = 'block';
-                
-                passConfirm.style.display = 'block';
+                tabReg.classList.add('active'); tabLogin.classList.remove('active');
+                icon.className = 'fas fa-store'; icon.style.color = 'var(--success)';
+                title.innerText = 'Nuevo Negocio'; subtitle.innerText = 'Crea tu espacio en la nube';
+                inputBiz.style.display = 'block'; passConfirm.style.display = 'block';
                 btnSubmit.innerHTML = '<i class="fas fa-rocket"></i> Crear Cuenta';
-                btnSubmit.style.backgroundColor = 'var(--success)';
-                btnSubmit.style.color = '#fff';
+                btnSubmit.style.backgroundColor = 'var(--success)'; btnSubmit.style.color = '#fff';
             }
         }
 
@@ -368,28 +412,17 @@
                 if (!sourceObj || typeof sourceObj !== 'object') return [];
                 let realKey = Object.keys(sourceObj).find(k => k.trim().toLowerCase() === key.toLowerCase());
                 if (!realKey) return [];
-
                 let val = sourceObj[realKey];
                 if (!val) return [];
-
                 if (Array.isArray(val)) return val;
                 
                 if (typeof val === 'string') {
                     val = val.trim();
                     if (val === "" || val === "[]") return [];
-                    try {
-                        let parsed = JSON.parse(val);
-                        if (typeof parsed === 'string') parsed = JSON.parse(parsed);
-                        if (Array.isArray(parsed)) return parsed;
-                    } catch(e) {}
-                    try {
-                        let parsed = JSON.parse(val.replace(/'/g, '"'));
-                        if (Array.isArray(parsed)) return parsed;
-                    } catch(e) {}
+                    try { let parsed = JSON.parse(val.replace(/'/g, '"')); if (Array.isArray(parsed)) return parsed; } catch(e) {}
                 }
                 if (typeof val === 'object') return Object.values(val);
-            } catch(e) { console.error("Error parseando " + key, e); }
-            return [];
+            } catch(e) {} return [];
         }
 
         function autenticarUsuario() {
@@ -399,152 +432,80 @@
             let passConfirm = document.getElementById('auth-pass-confirm').value.trim();
 
             if(!email || !pass) return mostrarToast("⚠️ Llena el correo y la contraseña");
-            
             if(currentAuthMode === 'register') {
                 if(!biz) return mostrarToast("⚠️ Ingresa el nombre de tu Barbería");
                 if(pass.length < 6) return mostrarToast("⚠️ Contraseña mínima 6 caracteres");
                 if(pass !== passConfirm) return mostrarToast("⚠️ Las contraseñas no coinciden");
             }
 
-            let btnLogin = document.getElementById('btn-login');
-            let originalText = btnLogin.innerHTML;
-            btnLogin.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conectando...';
-            btnLogin.disabled = true;
+            let btnLogin = document.getElementById('btn-login'); let originalText = btnLogin.innerHTML;
+            btnLogin.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conectando...'; btnLogin.disabled = true;
 
             let payload = { action: "registro_login", mode: currentAuthMode, email: email, password: pass, bizName: biz };
 
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST', redirect: 'follow',
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify(payload)
-            })
-            .then(response => response.json())
+            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', redirect: 'follow', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
+            .then(res => res.json())
             .then(data => {
-                btnLogin.innerHTML = originalText;
-                btnLogin.disabled = false;
-
+                btnLogin.innerHTML = originalText; btnLogin.disabled = false;
                 if (data.success) {
                     appData.email = sanitize(email);
-                    
                     let source = data.data || data || {};
                     if(source) {
                         appData.dbId = source.dbId || appData.dbId;
                         appData.bizName = sanitize(source.bizName || biz || appData.bizName);
-                        
-                        let rawSrv = extractArraySafely('servicios', source);
-                        appData.servicios = rawSrv.map(x => normalizarData(x, 'servicio')).filter(x => x !== null);
-                        
-                        let rawPrd = extractArraySafely('productos', source);
-                        appData.productos = rawPrd.map(x => normalizarData(x, 'producto')).filter(x => x !== null);
-                        
-                        let rawHist = extractArraySafely('historial', source);
-                        appData.historial = rawHist.map(x => normalizarData(x, 'historial')).filter(x => x !== null);
+                        appData.servicios = extractArraySafely('servicios', source).map(x => normalizarData(x, 'servicio')).filter(x => x);
+                        appData.productos = extractArraySafely('productos', source).map(x => normalizarData(x, 'producto')).filter(x => x);
+                        appData.historial = extractArraySafely('historial', source).map(x => normalizarData(x, 'historial')).filter(x => x);
                     }
-                    
-                    guardarLocales();
-                    iniciarApp();
-                    mostrarToast("✅ Conexión exitosa");
+                    guardarLocales(); iniciarApp(); mostrarToast("✅ Conexión exitosa");
                 } else {
                     let msg = (data.message || "").toLowerCase();
-                    
-                    if (currentAuthMode === 'login' && (msg.includes('no exist') || msg.includes('no encontrad') || msg.includes('registr') || msg.includes('not found'))) {
-                        mostrarToast("⚠️ Cuenta no registrada. Cambiando a Registro...");
-                        setTimeout(() => setAuthMode('register'), 2000);
-                    } 
-                    else if (currentAuthMode === 'register' && (msg.includes('ya exist') || msg.includes('registrad') || msg.includes('uso') || msg.includes('already'))) {
-                        mostrarToast("⚠️ El correo ya existe. Cambiando a Iniciar Sesión...");
-                        setTimeout(() => setAuthMode('login'), 2000);
-                    } 
-                    else {
-                        mostrarToast("❌ " + (data.message || "Error en la autenticación"));
-                    }
+                    if (currentAuthMode === 'login' && (msg.includes('exist') || msg.includes('not found'))) { mostrarToast("⚠️ Cuenta no registrada. Cambiando a Registro..."); setTimeout(() => setAuthMode('register'), 2000); } 
+                    else if (currentAuthMode === 'register' && msg.includes('ya exist')) { mostrarToast("⚠️ El correo ya existe. Cambiando a Iniciar Sesión..."); setTimeout(() => setAuthMode('login'), 2000); } 
+                    else { mostrarToast("❌ " + (data.message || "Error en autenticación")); }
                 }
-            })
-            .catch(error => {
-                btnLogin.innerHTML = originalText;
-                btnLogin.disabled = false;
-                mostrarToast("❌ Error de conexión con la nube");
-            });
+            }).catch(error => { btnLogin.innerHTML = originalText; btnLogin.disabled = false; mostrarToast("❌ Error de red"); });
         }
 
         function cambiarContrasenaApp() {
-            let pass = document.getElementById('new-pass').value.trim();
-            let conf = document.getElementById('conf-new-pass').value.trim();
-
-            if(!pass || pass.length < 6) return mostrarToast("⚠️ La contraseña debe tener mínimo 6 caracteres");
+            let pass = document.getElementById('new-pass').value.trim(), conf = document.getElementById('conf-new-pass').value.trim();
+            if(!pass || pass.length < 6) return mostrarToast("⚠️ Mínimo 6 caracteres");
             if(pass !== conf) return mostrarToast("⚠️ Las contraseñas no coinciden");
-
             mostrarToast("⏳ Actualizando...");
-
-            let payload = { action: "cambiar_contrasena", email: appData.email, newPassword: pass };
-
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST', redirect: 'follow', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.success) {
-                    mostrarToast("✅ Contraseña actualizada correctamente");
-                    document.getElementById('new-pass').value = '';
-                    document.getElementById('conf-new-pass').value = '';
-                } else { mostrarToast("❌ Error: " + (data.message || "No se pudo actualizar")); }
-            })
-            .catch(e => mostrarToast("❌ Error de red al cambiar contraseña"));
+            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', redirect: 'follow', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "cambiar_contrasena", email: appData.email, newPassword: pass }) })
+            .then(res => res.json()).then(data => { if(data.success) { mostrarToast("✅ Contraseña actualizada"); document.getElementById('new-pass').value=''; document.getElementById('conf-new-pass').value=''; } else { mostrarToast("❌ Error"); } }).catch(e => mostrarToast("❌ Error de red"));
         }
 
         function iniciarApp() {
             document.getElementById('auth-screen').style.display = 'none';
             document.getElementById('app-container').style.display = 'block';
-            
             document.getElementById('display-biz-name').innerText = appData.bizName || 'Mi Negocio';
             document.getElementById('display-email').innerText = appData.email;
             document.getElementById('ajustes-email').innerText = appData.email;
-            
             aplicarTema(appData.theme);
             if(appData.lightMode) { document.body.classList.add('light-mode'); document.getElementById('mod-theme-toggle').checked = true; }
-
             renderAll();
         }
 
-        function cerrarSesion() {
-            localStorage.removeItem('posSaaS_Session');
-            location.reload();
-        }
-
+        function cerrarSesion() { localStorage.removeItem('posSaaS_Session'); location.reload(); }
         function guardarLocales() { localStorage.setItem('posSaaS_Session', JSON.stringify(appData)); }
-
-        function sincronizarVentaCloud() {
-            if (!appData.dbId) return; 
-            let payload = { action: "sync_historial", dbId: appData.dbId, historial: appData.historial };
-            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', redirect: 'follow', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }).catch(e=>e);
-        }
 
         function switchView(viewId, btnElement, title) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            
             document.getElementById(viewId).classList.add('active');
             if(btnElement) btnElement.classList.add('active');
             document.getElementById('header-view-name').innerText = title;
         }
 
-        function actualizarReloj() {
-            document.getElementById('reloj').innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        }
-
-        function renderAll() { 
-            renderServicios(); 
-            renderProductos(); 
-            renderHistorial(); 
-        }
+        function actualizarReloj() { document.getElementById('reloj').innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); }
+        function renderAll() { renderServicios(); renderProductos(); renderHistorial(); }
 
         function renderServicios() {
             let html = '';
             if (!appData.servicios || appData.servicios.length === 0) {
-                document.getElementById('grid-servicios').innerHTML = `<p style="grid-column: span 2; text-align: center; color: var(--text-muted); font-size: 12px;">Tu base de datos de servicios está vacía.</p>`;
-                return;
+                document.getElementById('grid-servicios').innerHTML = `<p style="grid-column: span 2; text-align: center; color: var(--text-muted); font-size: 12px;">Tu base de datos de servicios está vacía.</p>`; return;
             }
-
             appData.servicios.forEach(s => {
                 html += `
                 <div class="item-box" onclick="abrirPOS('SERVICIO', '${s.id}')">
@@ -559,21 +520,28 @@
         }
 
         function renderProductos() {
-            let html = '';
-            if (!appData.productos || appData.productos.length === 0) {
-                document.getElementById('lista-productos').innerHTML = `<p style="text-align: center; color: var(--text-muted); font-size: 12px;">Tu base de datos de productos está vacía.</p>`;
-                return;
+            let html = ''; let busqueda = (document.getElementById('search-prod') ? document.getElementById('search-prod').value.toLowerCase().trim() : '');
+            let filtrados = appData.productos || [];
+
+            if (busqueda !== '') {
+                filtrados = filtrados.filter(p => p.nombre.toLowerCase().includes(busqueda) || p.detalle.toLowerCase().includes(busqueda));
             }
 
-            appData.productos.forEach(p => {
+            if (filtrados.length === 0) { document.getElementById('lista-productos').innerHTML = `<p style="text-align: center; color: var(--text-muted); font-size: 12px;">No hay productos.</p>`; return; }
+
+            filtrados.forEach(p => {
+                let badgeClass = p.stock <= 5 ? "stock-badge low" : "stock-badge";
                 html += `
                 <div class="list-row" onclick="abrirPOS('PRODUCTO', '${p.id}')">
-                    <button class="btn-delete" style="top:15px; right: 10px; position:absolute;" onclick="event.stopPropagation(); eliminarItem('producto', '${p.id}')"><i class="fas fa-trash"></i></button>
-                    <div style="flex:1;">
+                    <div class="${badgeClass}">📦 ${p.stock}</div>
+                    <button class="btn-add-stock" onclick="event.stopPropagation(); agregarStock('${p.id}')"><i class="fas fa-plus"></i></button>
+                    <button class="btn-delete" style="top:10px; right: 10px;" onclick="event.stopPropagation(); eliminarItem('producto', '${p.id}')"><i class="fas fa-trash"></i></button>
+                    
+                    <div style="flex:1; margin-top: 10px;">
                         <div style="font-size: 14px; font-weight:600;">${p.nombre}</div>
                         <div style="font-size: 11px; color: var(--text-muted); margin-top:3px;">${p.detalle}</div>
                     </div>
-                    <div style="text-align: right; padding-right:45px;">
+                    <div style="text-align: right; padding-right:85px; margin-top: 10px;">
                         <div style="color: var(--accent); font-weight: bold;">$${p.precio.toLocaleString('es-CO')}</div>
                     </div>
                 </div>`;
@@ -584,27 +552,20 @@
         function registrarEnHistorial(desc, monto, tipoStr) {
             let now = new Date();
             appData.historial.push({ 
-                id: String(Date.now()), 
-                fechaISO: now.toISOString().split('T')[0], 
+                id: String(Date.now()), fechaISO: now.toISOString().split('T')[0], 
                 hora: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), 
-                desc: sanitize(desc), 
-                monto: monto, 
-                tipo: tipoStr 
+                desc: sanitize(desc), monto: monto, tipo: tipoStr 
             });
-            guardarLocales(); 
-            renderHistorial();
-            sincronizarVentaCloud(); 
+            guardarLocales(); renderHistorial();
+            if (appData.dbId) fetch(GOOGLE_SCRIPT_URL, { method: 'POST', redirect: 'follow', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "sync_historial", dbId: appData.dbId, historial: appData.historial }) }).catch(e=>e);
         }
 
         function renderHistorial() {
-            let html = ''; 
-            let total = 0;
+            let html = ''; let total = 0;
             let fechaInicio = document.getElementById('filtro-inicio').value;
             let fechaFin = document.getElementById('filtro-fin').value;
             
-            if (!appData.historial) appData.historial = [];
-            let historiaInvertida = [...appData.historial].reverse();
-
+            let historiaInvertida = [...(appData.historial || [])].reverse();
             historiaInvertida.forEach(h => {
                 let mostrar = true;
                 if(fechaInicio && h.fechaISO < fechaInicio) mostrar = false;
@@ -626,31 +587,33 @@
                     </div>`;
                 }
             });
-            
-            document.getElementById('lista-historial').innerHTML = html || '<p style="text-align:center; color:gray; font-size:12px;">No hay ventas registradas en este periodo.</p>';
+            document.getElementById('lista-historial').innerHTML = html || '<p style="text-align:center; color:gray; font-size:12px;">No hay ventas registradas.</p>';
             document.getElementById('total-filtro').innerText = `$${total.toLocaleString('es-CO')}`;
         }
 
         function abrirFormulario(tipo) {
             document.getElementById('form-type').value = tipo;
             document.getElementById('form-title').innerText = tipo === 'servicio' ? 'Nuevo Servicio' : 'Nuevo Producto';
-            document.getElementById('lbl-detail').innerText = tipo === 'servicio' ? 'Duración (Ej: 40 min)' : 'Detalle/Stock (Ej: Cod 01)';
-            document.getElementById('form-name').value = ''; 
-            document.getElementById('form-price').value = '';
-            document.getElementById('form-detail').value = '';
+            document.getElementById('lbl-detail').innerText = tipo === 'servicio' ? 'Duración (Ej: 40 min)' : 'Detalle/Código (Ej: Cod 01)';
+            
+            if(tipo === 'servicio') document.getElementById('container-stock').style.display = 'none';
+            else document.getElementById('container-stock').style.display = 'block';
+
+            document.getElementById('form-name').value = ''; document.getElementById('form-price').value = '';
+            document.getElementById('form-detail').value = ''; document.getElementById('form-stock').value = '';
             document.getElementById('modal-form').classList.add('active');
         }
 
         function guardarItem() {
             let tipo = document.getElementById('form-type').value;
-            
             let item = {
                 id: String(Date.now()),
                 nombre: sanitize(document.getElementById('form-name').value.trim()),
                 precio: Number(document.getElementById('form-price').value),
-                detalle: sanitize(document.getElementById('form-detail').value.trim())
+                detalle: sanitize(document.getElementById('form-detail').value.trim()),
+                stock: tipo === 'producto' ? (Number(document.getElementById('form-stock').value) || 0) : 0
             };
-            if(!item.nombre || isNaN(item.precio)) return mostrarToast("⚠️ Llena el nombre y un precio válido");
+            if(!item.nombre || isNaN(item.precio)) return mostrarToast("⚠️ Llena nombre y precio");
             
             if(tipo === 'servicio') appData.servicios.push(item);
             else appData.productos.push(item);
@@ -659,28 +622,37 @@
             sincronizarItemCloud(item, tipo);
         }
 
+        function agregarStock(id) {
+            let p = appData.productos.find(prod => prod.id === id);
+            if (!p) return;
+            let cantidad = prompt(`¿Cuántas unidades nuevas deseas añadir a "${p.nombre}"?\n(Stock actual: ${p.stock})`);
+            if (cantidad !== null && cantidad.trim() !== "") {
+                let num = parseInt(cantidad);
+                if (!isNaN(num) && num > 0) {
+                    p.stock += num;
+                    guardarLocales(); renderProductos(); mostrarToast(`✅ Stock actualizado a ${p.stock}`);
+                    sincronizarItemCloud(p, 'producto');
+                } else { mostrarToast("⚠️ Ingresa un número válido mayor a 0"); }
+            }
+        }
+
         function sincronizarItemCloud(itemData, tipoItem) {
             if (!appData.dbId) return; 
             let payload = { action: "sync_item", dbId: appData.dbId, tipo: tipoItem, item: itemData };
-            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', redirect: 'follow', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
-            .catch(err => console.error("Error conexión ítem:", err));
+            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', redirect: 'follow', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }).catch(e=>e);
         }
 
         function eliminarItem(tipo, id) {
-            if(confirm("⚠️ ¿Eliminar este elemento permanentemente?")) {
+            if(confirm("⚠️ ¿Estás seguro de eliminar este elemento?")) {
                 if(tipo === 'servicio') appData.servicios = appData.servicios.filter(s => s.id !== String(id));
                 else appData.productos = appData.productos.filter(p => p.id !== String(id));
-                guardarLocales(); renderAll(); mostrarToast("🗑️ Elemento eliminado");
+                guardarLocales(); renderAll(); mostrarToast("🗑️ Eliminado");
             }
         }
 
         function abrirPOS(tipo, id) {
             posCurrentAction = { tipo, id: String(id) };
-            
-            let item = tipo === 'SERVICIO' 
-                ? appData.servicios.find(s => s.id === String(id)) 
-                : appData.productos.find(p => p.id === String(id));
-            
+            let item = tipo === 'SERVICIO' ? appData.servicios.find(s => s.id === String(id)) : appData.productos.find(p => p.id === String(id));
             if(!item) return mostrarToast("⚠️ Error: Ítem no encontrado");
 
             document.getElementById('pos-title').innerText = tipo === 'SERVICIO' ? 'Cobrar Servicio' : 'Añadir al Carrito';
@@ -693,63 +665,67 @@
             let precio = Number(document.getElementById('pos-price').value);
             if(isNaN(precio) || precio < 0) return mostrarToast("⚠️ Monto inválido");
 
-            let item = posCurrentAction.tipo === 'SERVICIO' 
-                ? appData.servicios.find(s => s.id === posCurrentAction.id) 
-                : appData.productos.find(p => p.id === posCurrentAction.id);
-            
-            let iName = item ? item.nombre : 'Item';
-
             if(posCurrentAction.tipo === 'SERVICIO') {
-                registrarEnHistorial(iName, precio, 'servicio');
+                let sName = appData.servicios.find(s => s.id === posCurrentAction.id).nombre;
+                registrarEnHistorial(`Servicio: ${sName}`, precio, 'servicio');
                 mostrarToast("✅ Servicio Cobrado");
             } else {
-                appData.carrito.cantidad += 1; appData.carrito.total += precio;
-                document.getElementById('cart-count').innerText = appData.carrito.cantidad;
+                let p = appData.productos.find(p => p.id === posCurrentAction.id);
+                if(p.stock > 0) p.stock -= 1; // Descuento de stock local
+                
+                appData.carrito.items.push({ id: p.id, nombre: p.nombre, precio: precio });
+                appData.carrito.total += precio;
+                
+                document.getElementById('cart-count').innerText = appData.carrito.items.length;
                 document.getElementById('cart-total').innerText = `$${appData.carrito.total.toLocaleString('es-CO')}`;
                 mostrarToast("🛒 Añadido al carrito");
+                renderProductos(); // Actualizar la vista de stock
             }
             cerrarModal('pos-modal');
         }
 
         function cobrarCarrito() {
-            if(appData.carrito.cantidad === 0) return mostrarToast("⚠️ Carrito vacío");
-            registrarEnHistorial(`Venta POS (${appData.carrito.cantidad} items)`, appData.carrito.total, 'producto');
-            appData.carrito = { cantidad: 0, total: 0 };
+            if(appData.carrito.items.length === 0) return mostrarToast("⚠️ Carrito vacío");
+            
+            let nombresVendidos = appData.carrito.items.map(i => i.nombre).join(', ');
+            let descripcionVenta = nombresVendidos.length > 50 ? nombresVendidos.substring(0, 50) + '...' : nombresVendidos;
+
+            registrarEnHistorial(`Venta: ${descripcionVenta}`, appData.carrito.total, 'producto');
+            
+            appData.carrito.items.forEach(cItem => {
+                let p = appData.productos.find(prod => prod.id === cItem.id);
+                if(p) sincronizarItemCloud(p, 'producto');
+            });
+
+            appData.carrito = { items: [], total: 0 };
             document.getElementById('cart-count').innerText = "0"; 
             document.getElementById('cart-total').innerText = "$0";
-            mostrarToast("✅ Venta procesada");
+            mostrarToast("✅ Venta pagada");
         }
 
-        function cambiarTema(color, element) {
-            document.documentElement.style.setProperty('--accent', color);
-            appData.theme = color;
-            guardarLocales();
-            document.querySelectorAll('.color-dot').forEach(el => el.style.borderColor = 'transparent');
-            if(element) element.style.borderColor = 'white';
+        function generarCotizacionWA() {
+            if(appData.carrito.items.length === 0) return mostrarToast("⚠️ Carrito vacío");
+            let texto = `*COTIZACIÓN DE PRODUCTOS* 💈\nFecha: ${new Date().toLocaleDateString()}\n\n`;
+            appData.carrito.items.forEach(item => { texto += `▪️ ${item.nombre}: *$${item.precio.toLocaleString('es-CO')}*\n`; });
+            texto += `\n*TOTAL: $${appData.carrito.total.toLocaleString('es-CO')}*\n\n_Sujeto a disponibilidad._`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
         }
 
-        function toggleLightMode() {
-            let isLight = document.getElementById('mod-theme-toggle').checked;
-            appData.lightMode = isLight;
-            if(isLight) document.body.classList.add('light-mode');
-            else document.body.classList.remove('light-mode');
-            guardarLocales();
+        function abrirScanner() {
+            document.getElementById('modal-scanner').classList.add('active');
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 150} }, false);
+            html5QrcodeScanner.render(decodedText => {
+                document.getElementById('search-prod').value = decodedText;
+                renderProductos(); cerrarScanner(); mostrarToast("✅ Código Detectado");
+            }, error => {});
         }
+        function cerrarScanner() { if(html5QrcodeScanner) html5QrcodeScanner.clear(); cerrarModal('modal-scanner'); }
 
-        function toggleModules() {
-            let servActivo = document.getElementById('mod-serv').checked;
-            let prodActivo = document.getElementById('mod-prod').checked;
-            document.getElementById('btn-nav-serv').style.display = servActivo ? 'flex' : 'none';
-            document.getElementById('btn-nav-prod').style.display = prodActivo ? 'flex' : 'none';
-        }
-
+        function cambiarTema(color, element) { document.documentElement.style.setProperty('--accent', color); appData.theme = color; guardarLocales(); document.querySelectorAll('.color-dot').forEach(el => el.style.borderColor = 'transparent'); if(element) element.style.borderColor = 'white'; }
+        function toggleLightMode() { appData.lightMode = document.getElementById('mod-theme-toggle').checked; if(appData.lightMode) document.body.classList.add('light-mode'); else document.body.classList.remove('light-mode'); guardarLocales(); }
+        function toggleModules() { document.getElementById('btn-nav-serv').style.display = document.getElementById('mod-serv').checked ? 'flex' : 'none'; document.getElementById('btn-nav-prod').style.display = document.getElementById('mod-prod').checked ? 'flex' : 'none'; }
         function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
-        function mostrarToast(msg) { 
-            let t = document.getElementById("toast"); 
-            t.innerText = msg; 
-            t.className = "show"; 
-            setTimeout(() => { t.className = t.className.replace("show", ""); }, 3000); 
-        }
+        function mostrarToast(msg) { let t = document.getElementById("toast"); t.innerText = msg; t.className = "show"; setTimeout(() => { t.className = t.className.replace("show", ""); }, 3000); }
         function aplicarTema(color) { document.documentElement.style.setProperty('--accent', color); }
     </script>
 </body>
