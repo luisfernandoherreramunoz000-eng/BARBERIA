@@ -3,16 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com https://script.google.com https://script.googleusercontent.com;">
     <title>SaaS POS Barber Pro</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <style>
-        /* =========================================
-           1. CSS - VARIABLES Y TEMA PREMIUM OSCURO
-           ========================================= */
         :root { 
             --bg-dark: #0f1115; --bg-card: #1c1f26; --bg-input: #252932; 
             --bg-header: rgba(15, 17, 21, 0.95); --bg-nav: rgba(28, 31, 38, 0.95);
@@ -237,7 +233,7 @@
         // --- FUNCIÓN SANITIZE 100% SEGURA ---
         function sanitize(str) {
             if (typeof str !== 'string') return str;
-            const map = { '&': '&', '<': '<', '>': '>', '"': '"', "'": ''', "/": '/' };
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', "/": '&#x2F;' };
             return str.replace(/[&<>"'/]/ig, (m) => map[m]);
         }
 
@@ -251,8 +247,7 @@
         let currentAuthMode = 'login';
 
         // =========================================================================
-        // NÚCLEO BLINDADO: NORMALIZADOR DE DATOS (ELIMINA FALLOS DE RENDERIZADO)
-        // Convierte cualquier basura o fila cruda de Google Sheets en un objeto JSON perfecto.
+        // NÚCLEO BLINDADO: NORMALIZADOR DE DATOS
         // =========================================================================
         function normalizarData(item, tipo) {
             if (!item) return null;
@@ -261,7 +256,6 @@
             }
 
             if (Array.isArray(item)) {
-                // Si la fila trae cabeceras (ID, Nombre), la ignoramos
                 if(String(item[0]).toLowerCase() === 'id' || String(item[1]).toLowerCase() === 'nombre') return null;
 
                 if (tipo === 'historial') {
@@ -273,7 +267,7 @@
                         monto: Number(item[4]) || 0,
                         tipo: sanitize(String(item[5] || 'servicio'))
                     };
-                } else { // Producto o Servicio
+                } else {
                     return {
                         id: String(item[0] || Date.now()),
                         nombre: sanitize(String(item[1] || 'Sin nombre')),
@@ -311,7 +305,6 @@
                     let parsedSession = JSON.parse(session);
                     appData = Object.assign(appData, parsedSession);
                     
-                    // Aseguramos que la caché local también pase por el normalizador para purificarla
                     appData.servicios = (appData.servicios || []).map(x => normalizarData(x, 'servicio')).filter(x => x);
                     appData.productos = (appData.productos || []).map(x => normalizarData(x, 'producto')).filter(x => x);
                     appData.historial = (appData.historial || []).map(x => normalizarData(x, 'historial')).filter(x => x);
@@ -370,7 +363,6 @@
             }
         }
 
-        // Extracción segura que intenta de múltiples formas obtener el array crudo del servidor
         function extractArraySafely(key, sourceObj) {
             try {
                 if (!sourceObj || typeof sourceObj !== 'object') return [];
@@ -387,7 +379,7 @@
                     if (val === "" || val === "[]") return [];
                     try {
                         let parsed = JSON.parse(val);
-                        if (typeof parsed === 'string') parsed = JSON.parse(parsed); // Doble parseo por seguridad
+                        if (typeof parsed === 'string') parsed = JSON.parse(parsed);
                         if (Array.isArray(parsed)) return parsed;
                     } catch(e) {}
                     try {
@@ -439,7 +431,6 @@
                         appData.dbId = source.dbId || appData.dbId;
                         appData.bizName = sanitize(source.bizName || biz || appData.bizName);
                         
-                        // === AQUÍ SE APLICA EL MIDDLEWARE DE NORMALIZACIÓN ===
                         let rawSrv = extractArraySafely('servicios', source);
                         appData.servicios = rawSrv.map(x => normalizarData(x, 'servicio')).filter(x => x !== null);
                         
@@ -454,7 +445,6 @@
                     iniciarApp();
                     mostrarToast("✅ Conexión exitosa");
                 } else {
-                    // LÓGICA INTELIGENTE DE REDIRECCIÓN EN CASO DE ERROR
                     let msg = (data.message || "").toLowerCase();
                     
                     if (currentAuthMode === 'login' && (msg.includes('no exist') || msg.includes('no encontrad') || msg.includes('registr') || msg.includes('not found'))) {
@@ -548,10 +538,6 @@
             renderHistorial(); 
         }
 
-        // =====================================================================
-        // RENDERIZADO SIMPLIFICADO: Como los datos ya están normalizados, 
-        // ya no hay riesgo de errores al leer `s.nombre` o `s.precio`.
-        // =====================================================================
         function renderServicios() {
             let html = '';
             if (!appData.servicios || appData.servicios.length === 0) {
@@ -658,9 +644,8 @@
         function guardarItem() {
             let tipo = document.getElementById('form-type').value;
             
-            // Creamos un objeto puro desde el inicio
             let item = {
-                id: String(Date.now()), // Clave para evitar choques con Google Sheets
+                id: String(Date.now()),
                 nombre: sanitize(document.getElementById('form-name').value.trim()),
                 precio: Number(document.getElementById('form-price').value),
                 detalle: sanitize(document.getElementById('form-detail').value.trim())
